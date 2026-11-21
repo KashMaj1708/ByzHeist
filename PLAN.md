@@ -188,6 +188,8 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 - **Bottom strip:** anti-cheat log, throughput sparkline, "Reset round" button.
 - Websocket pushes state ~4x per second. Endpoints: `GET /`, `WS /ws`, `POST /red/voice|text|surprise|manual`, `POST /blue/approve|deny`, `POST /round/reset`, `GET /telemetry.png`.
 - Must run with one command: `python -m byzheist.server` → http://localhost:8000.
+- **Access code (needed because the app will be exposed through a public tunnel):** `ARENA_ACCESS_CODE` in `.env` (gitignored). Requests from `127.0.0.1` skip the check **only if they carry no `Cf-Connecting-IP` or `X-Forwarded-For` header** (cloudflared forwards every tunneled request from localhost, so those headers are how to tell a judge from your own browser). Any other client must open `/?code=<code>` once; the server sets an httponly cookie and rejects every endpoint and the websocket without it (401 page with a code box). Server binds to `127.0.0.1` only, so the tunnel is the only outside path.
+- **Shared arena lock:** only one Red controller at a time. The first browser that sends a Red action holds the Red seat for 60 s of inactivity; others see "Red seat taken" but can still watch and approve/deny Blue's pending quarantines.
 
 **Tests** (`tests/test_phase5.py`): server starts with `FakeGemini`; `/` returns HTML; websocket sends a state message; `POST /red/manual` sets a fault and a budget violation shows in the anti-cheat log.
 
@@ -212,6 +214,7 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 ## Phase 7: Ship (target: 4:30 PM, hard stop)
 
 - README: one-liner, how to run, architecture sketch, model roles table (Carbon = Red planner from voice, Hydrogen = Red adaptation, Decision 1 = Blue triage on telemetry images, Neon = Blue escalation + explanations), eval table from `EVAL.md`, known limits, **"What was built at the hackathon"**.
+- **Public link via Cloudflare quick tunnel** (no account): `winget install --id Cloudflare.cloudflared`, start the server, then `cloudflared tunnel --url http://localhost:8000`. Copy the `https://<random>.trycloudflare.com` URL. Verify from a phone on mobile data: code prompt appears, `/?code=...` loads the arena, websocket updates flow, and the phone mic records (HTTPS makes `getUserMedia` work). Put the steps in README under "Try it live" (never write the code itself in the repo). Note: the URL changes every time cloudflared restarts.
 - Confirm no secrets in git history (`git log -p | grep -i "api_key\|AIza"` must be empty).
 - 1-minute demo video checklist in `reports/PHASE_7.md`: judge voice attack → Blue verdict → approve quarantine → replace → counter holds → eval table.
 

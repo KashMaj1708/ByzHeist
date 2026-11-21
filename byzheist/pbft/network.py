@@ -84,7 +84,7 @@ class InMemoryNetwork:
         if self._closed or dst not in self._handlers:
             return
 
-        now = time.monotonic()
+        now = time.perf_counter()
         msg_type, view, seq, digest = _extract_event_fields(msg)
         dropped = (
             src in self.dropped_nodes

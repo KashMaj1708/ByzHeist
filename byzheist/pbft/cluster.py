@@ -98,6 +98,7 @@ class Cluster:
         self.budget = FaultBudget(self, calibration=calibration)
         self._load_tasks: set[asyncio.Task[Any]] = set()
         self._running: bool = False
+        self.start_mono: float = time.monotonic()
 
     # ------------------------------------------------------------------
     # Internal ground-truth fault helpers (used ONLY by FaultBudget & Eval)
@@ -280,6 +281,7 @@ class Cluster:
 
     async def start(self) -> None:
         self._running = True
+        self.start_mono = time.monotonic()
         for replica in self.replicas.values():
             await replica.start()
 

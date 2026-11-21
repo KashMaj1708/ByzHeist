@@ -75,6 +75,7 @@ class Replica:
         self.view_change_target: int = 0
         self.next_seq: int = 1
         self.view_change_times: list[float] = []
+        self.view_change_mono_times: list[float] = []
 
         # Bank ledger & execution state
         self.balances: dict[str, int] = {
@@ -370,7 +371,7 @@ class Replica:
         if not self._running:
             return
         if src in self.replica_ids and src != self.replica_id:
-            self.observations.record_latency(src, (time.monotonic() - send_ts) * 1000.0)
+            self.observations.record_latency(src, (time.perf_counter() - send_ts) * 1000.0)
 
         if isinstance(msg, Request):
             self._on_request(msg)
@@ -969,6 +970,7 @@ class Replica:
         self._cancel_vc_timer()
         if nv.new_view > self.view:
             self.view_change_times.append(time.time())
+            self.view_change_mono_times.append(time.monotonic())
         self.view = nv.new_view
         self.in_view_change = False
         self.view_change_target = nv.new_view
