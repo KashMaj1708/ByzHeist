@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "byzheist"
+version = "0.1.0"
+description = "Adversarial Byzantine-fault-tolerant bank arena with Gemini 4 Red/Blue agents"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pynacl",
+    "fastapi",
+    "uvicorn[standard]",
+    "httpx",
+    "matplotlib",
+    "google-genai>=3.2.0",
+    "python-dotenv",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.setuptools.packages.find]
+include = ["byzheist*", "eval*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "live: live integration tests calling Gemini API (skipped without GEMINI_API_KEY)",
+]
