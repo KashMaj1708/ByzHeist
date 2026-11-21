@@ -24,3 +24,4 @@ dist/
 # Generated telemetry & runtime outputs
 out/*.png
 out/**/*.png
+out/*.md

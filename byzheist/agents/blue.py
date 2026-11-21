@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
+import traceback
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel
@@ -212,14 +214,26 @@ class BlueWatchdog:
                         f"{item['kind']}:{item['accused']}:{item['view']}:{item['seq']}"
                     )
 
-            self.sandbox.quarantine(accused)
-            self.sandbox.replace(accused)
+            q_ev = self.sandbox.quarantine(
+                accused,
+                attack_type=str(ev["kind"]),
+                source="proof",
+            )
+            rep_ev = self.sandbox.replace(
+                accused,
+                attack_type=str(ev["kind"]),
+                source="proof",
+            )
             now_ts = time.time()
             self.timeline.append(
                 {
                     "timestamp": now_ts,
                     "action": "auto_quarantine_replace",
                     "replica_id": accused,
+                    "node": accused,
+                    "seq": rep_ev.get("seq", 0),
+                    "source": "proof",
+                    "attack_type": str(ev["kind"]),
                     "reason": f"Verified cryptographic proof ({ev['kind']})",
                 }
             )
@@ -236,6 +250,8 @@ class BlueWatchdog:
                     "attack_type": ev["kind"],
                     "auto_quarantined": True,
                     "replaced": True,
+                    "quarantine_event": q_ev,
+                    "replace_event": rep_ev,
                     "evidence": ev,
                     "explanation": explanation,
                 }
@@ -392,21 +408,58 @@ class BlueWatchdog:
         except RateLimitExceededError:
             return None
 
-    def approve_pending(self) -> dict[str, Any] | None:
+    def approve_pending(self, raise_on_error: bool = False) -> dict[str, Any] | None:
         """Human operator approves pending quarantine -> quarantine + replace suspect."""
         if self.pending_quarantine is None:
             return None
         pending = self.pending_quarantine
-        self.pending_quarantine = None
         suspect = str(pending["suspect"])
-        self.sandbox.quarantine(suspect)
-        self.sandbox.replace(suspect)
+        attack_type = str(pending.get("attack_type", "unknown"))
+        try:
+            q_ev = self.sandbox.quarantine(
+                suspect,
+                attack_type=attack_type,
+                source="human approved",
+            )
+            rep_ev = self.sandbox.replace(
+                suspect,
+                attack_type=attack_type,
+                source="human approved",
+            )
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logging.getLogger(__name__).error("approve_pending failed for %s:\n%s", suspect, tb)
+            self._emit(
+                {
+                    "timestamp": time.time(),
+                    "mode": "approve_error",
+                    "replica_id": suspect,
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "traceback": tb,
+                }
+            )
+            if raise_on_error:
+                raise
+            return {
+                "ok": False,
+                "error": f"{type(exc).__name__}: {exc}",
+                "traceback": tb,
+                "replica_id": suspect,
+            }
+
+        # Only clear pending_quarantine AFTER quarantine + replace succeed
+        self.pending_quarantine = None
         entry = {
+            "ok": True,
             "timestamp": time.time(),
             "action": "human_approved_quarantine_replace",
             "replica_id": suspect,
-            "attack_type": pending.get("attack_type", "unknown"),
-            "source": pending.get("source", "decision"),
+            "node": suspect,
+            "seq": rep_ev.get("seq", 0),
+            "attack_type": attack_type,
+            "source": "human approved",
+            "quarantine_event": q_ev,
+            "replace_event": rep_ev,
         }
         self.timeline.append(entry)
         self._emit({"timestamp": entry["timestamp"], "mode": "human_approved", **entry})

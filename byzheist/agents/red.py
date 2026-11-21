@@ -143,10 +143,50 @@ class RedAttacker:
         self.active_node: str | None = None
         self.active_mode: str = "honest"
         self.active_params: dict[str, Any] = {}
+        self.last_eviction: dict[str, Any] | None = None
+        self.eviction_events: list[dict[str, Any]] = []
         self.history: list[dict[str, Any]] = []
 
         self._adapt_task: asyncio.Task[None] | None = None
         self._running: bool = False
+        if hasattr(self.sandbox, "on_node_replaced"):
+            self.sandbox.on_node_replaced(self._handle_cluster_replace)
+
+    def _handle_cluster_replace(self, node: str, rep_ev: dict[str, Any]) -> None:
+        self.evict_node(node, event_id=rep_ev.get("id"))
+
+    def evict_node(self, node: str, event_id: int | None = None) -> dict[str, Any] | None:
+        """Evict Red when `cluster.replace(node)` wipes & re-keys the compromised replica."""
+        if self.active_node != node:
+            return None
+        self.active_node = None
+        self.active_mode = "honest"
+        self.active_params = {}
+        # Cancel current in-flight sleep/adaptation cycle for the evicted node; if loop was
+        # running, restart idle watcher so future plans still adapt once re-planned.
+        if self._adapt_task is not None and not self._adapt_task.done():
+            self._adapt_task.cancel()
+            if self._running:
+                try:
+                    loop = asyncio.get_running_loop()
+                    self._adapt_task = loop.create_task(self._loop())
+                except RuntimeError:
+                    self._adapt_task = None
+            else:
+                self._adapt_task = None
+
+        ev_id = int(event_id) if event_id is not None else (len(self.eviction_events) + 1)
+        ev = {
+            "id": ev_id,
+            "timestamp": time.time(),
+            "source": "system",
+            "event": "red_evicted",
+            "node": node,
+            "message": f"Red evicted from {node}",
+        }
+        self.last_eviction = ev
+        self.eviction_events.append(ev)
+        return self._emit(ev)
 
     def _emit(self, event: dict[str, Any]) -> dict[str, Any]:
         self.history.append(event)

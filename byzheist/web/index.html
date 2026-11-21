@@ -254,6 +254,59 @@
       padding: 24px;
     }
     #imgModal img { max-width: 95vw; max-height: 92vh; border-radius: 10px; border: 1px solid var(--border); }
+    #arenaEventBanner {
+      display: none;
+      margin: 10px 16px 0;
+      padding: 13px 20px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 0.01em;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      transition: background 0.22s ease, border-color 0.22s ease;
+    }
+    #arenaEventBanner.banner-quarantine {
+      display: block;
+      background: linear-gradient(90deg, #7f1d1d, #dc2626, #7f1d1d);
+      border: 2px solid #fca5a5;
+      color: #ffffff;
+    }
+    #arenaEventBanner.banner-replace {
+      display: block;
+      background: linear-gradient(90deg, #064e3b, #059669, #064e3b);
+      border: 2px solid #6ee7b7;
+      color: #ffffff;
+    }
+    .evict-toast {
+      display: none;
+      padding: 8px 11px;
+      border-radius: 7px;
+      background: rgba(239, 68, 68, 0.22);
+      border: 1px solid #f87171;
+      color: #fecaca;
+      font-weight: 700;
+      font-size: 12.5px;
+      text-align: center;
+    }
+    @keyframes nodePulseRed {
+      0% { stroke-width: 3.5; r: 38; }
+      50% { stroke-width: 7.5; r: 42; }
+      100% { stroke-width: 3.5; r: 38; }
+    }
+    @keyframes nodeSpinReplace {
+      0% { transform: scale(0.55) rotate(-180deg); opacity: 0.35; }
+      65% { transform: scale(1.12) rotate(10deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .svg-node-quarantine circle {
+      animation: nodePulseRed 0.65s infinite ease-in-out;
+    }
+    .svg-node-replace {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: nodeSpinReplace 0.85s ease-out;
+    }
   </style>
 </head>
 <body>
@@ -263,12 +316,18 @@
       <span id="roundLabel">Round #1</span>
       <span class="meta-pill" id="modeBadge">Connecting...</span>
       <span class="meta-pill" id="apiCallBadge">API: 0/30 rpm</span>
+      <label class="meta-pill" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+        <input type="checkbox" id="commentaryToggle" style="margin:0;" />
+        <span>Commentary (TTS)</span>
+      </label>
     </div>
     <div class="invariants">
       <div class="inv-pill" id="bankTotalPill">Bank total: 10,000</div>
       <div class="inv-pill" id="agreementPill">Honest replicas agree: YES</div>
     </div>
   </header>
+
+  <div id="arenaEventBanner" role="status" aria-live="polite"></div>
 
   <main>
     <!-- LEFT: JUDGE = RED CONTROLLER -->
@@ -279,6 +338,7 @@
       </h2>
 
       <div id="seatBanner" class="seat-banner seat-free">Red seat open — send an attack to claim (60s lock)</div>
+      <div id="redEvictToast" class="evict-toast"></div>
 
       <div class="card">
         <button id="micBtn" class="mic-btn">Hold to Speak Attack (Mic → Carbon)</button>
@@ -323,6 +383,14 @@
           <button data-mode="collude" title="Requires Calibration round">collude (2f)</button>
           <button data-mode="honest" style="grid-column: span 3;">clear (honest)</button>
         </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-weight:700; font-size:11.5px; color:#c084fc;">Antigravity Managed Agent Red</span>
+          <span id="campaignRoundBadge" class="meta-pill" style="padding:2px 7px; font-size:11px;">Idle (0/3)</span>
+        </div>
+        <div id="campaignPlaybook" class="log-list" style="max-height:95px; white-space:pre-wrap;">Run `scripts/red_campaign.py` to launch a 3-round Managed Agent heist campaign and build PLAYBOOK.md.</div>
       </div>
     </section>
 
@@ -374,6 +442,7 @@
       <div id="pendingCard" class="card pending-card" style="display:none;">
         <div style="font-weight:700; color:#fcd34d; margin-bottom:4px;">Pending Quarantine — Human Approval Required</div>
         <div id="pendingText" style="font-size:12px; margin-bottom:8px;"></div>
+        <div id="pendingError" style="display:none; color:#fca5a5; font-size:11.5px; margin-bottom:8px; padding:6px; background:rgba(127,29,29,0.45); border-radius:5px;"></div>
         <div style="display:flex; gap:8px;">
           <button id="approveBtn" class="btn-green" style="flex:1;">Approve Quarantine &amp; Replace</button>
           <button id="denyBtn" style="flex:1;">Deny</button>
@@ -496,28 +565,85 @@
     let selectedManualNode = "S0";
     let particles = [];
     let lastSeenMsgKey = "";
+    let seenQuarantineId = 0;
+    let seenReplaceId = 0;
+    let seenEvictionId = 0;
+    let currentRoundSeen = 0;
+    let activeStageNode = null;
+    let activeStagePhase = null; // "quarantine" | "replace" | null
+    let bannerTimers = [];
+    let audioQueue = [];
+    let audioPlaying = false;
 
-    // Build static ring links
-    (function initSvgLinks() {
+    function renderRingLinks(nodes) {
       const layer = document.getElementById("linksLayer");
+      layer.innerHTML = "";
       const ids = ["S0", "S1", "S2", "S3"];
       for (let i = 0; i < ids.length; i++) {
         for (let j = i + 1; j < ids.length; j++) {
-          const a = NODE_COORDS[ids[i]], b = NODE_COORDS[ids[j]];
+          const idA = ids[i], idB = ids[j];
+          const a = NODE_COORDS[idA], b = NODE_COORDS[idB];
+          const qA = (nodes && nodes[idA] && nodes[idA].quarantined) || (activeStagePhase === "quarantine" && activeStageNode === idA);
+          const qB = (nodes && nodes[idB] && nodes[idB].quarantined) || (activeStagePhase === "quarantine" && activeStageNode === idB);
           const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
           line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
           line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
-          line.setAttribute("stroke", "#1e293b");
-          line.setAttribute("stroke-width", "1.4");
+          if (qA || qB) {
+            line.setAttribute("stroke", "#ef4444");
+            line.setAttribute("stroke-width", "1.8");
+            line.setAttribute("stroke-dasharray", "6,6");
+            line.setAttribute("opacity", "0.75");
+          } else {
+            line.setAttribute("stroke", "#1e293b");
+            line.setAttribute("stroke-width", "1.4");
+          }
           layer.appendChild(line);
         }
       }
-    })();
+    }
+    renderRingLinks(null);
+
+    function triggerQuarantineReplaceBanner(qEv, repEv) {
+      bannerTimers.forEach(t => clearTimeout(t));
+      bannerTimers = [];
+      const banner = document.getElementById("arenaEventBanner");
+      const node = (repEv && repEv.node) || (qEv && qEv.node) || "S?";
+      const atk = (repEv && repEv.attack_type) || (qEv && qEv.attack_type) || "fault";
+      const src = (repEv && repEv.source) || (qEv && qEv.source) || "proof";
+
+      // Step 1 (~1.6s): Red QUARANTINED banner + pulsing red node & dashed links
+      activeStageNode = node;
+      activeStagePhase = "quarantine";
+      banner.className = "banner-quarantine";
+      banner.textContent = `\u{1F6A8} ${node} QUARANTINED: ${atk} (${src})`;
+
+      if (repEv) {
+        // Step 2 (~1.8s): Green REPLACED banner + spin/flash green to honest
+        bannerTimers.push(setTimeout(() => {
+          activeStagePhase = "replace";
+          banner.className = "banner-replace";
+          banner.textContent = `\u{1F504} ${repEv.node} REPLACED: fresh key, state transferred at seq ${repEv.seq}`;
+        }, 1600));
+        bannerTimers.push(setTimeout(() => {
+          activeStageNode = null;
+          activeStagePhase = null;
+          banner.className = "";
+          banner.style.display = "";
+        }, 3500));
+      } else {
+        bannerTimers.push(setTimeout(() => {
+          activeStageNode = null;
+          activeStagePhase = null;
+          banner.className = "";
+          banner.style.display = "";
+        }, 3000));
+      }
+    }
 
     function renderNodes(nodes) {
+      renderRingLinks(nodes);
       const layer = document.getElementById("nodesLayer");
       layer.innerHTML = "";
-      // Client badge
       const cg = document.createElementNS("http://www.w3.org/2000/svg", "g");
       cg.innerHTML = `<rect x="18" y="37" width="68" height="34" rx="7" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
         <text x="52" y="58" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="700">Client</text>`;
@@ -527,17 +653,40 @@
         const n = nodes[id];
         if (!n) continue;
         const pos = NODE_COORDS[id];
-        const stroke = STATE_COLORS[n.visual_state] || "#10b981";
-        const dash = n.visual_state === "quarantined" ? 'stroke-dasharray="5,4"' : "";
+        const isQuarStage = (activeStageNode === id && activeStagePhase === "quarantine") || n.visual_state === "quarantined";
+        const isRepStage = (activeStageNode === id && activeStagePhase === "replace") || n.visual_state === "replacing";
+
+        let stroke = STATE_COLORS[n.visual_state] || "#10b981";
+        let fill = "#0f172a";
+        let cls = "";
+        if (isQuarStage) {
+          stroke = "#ef4444";
+          fill = "#2a0f18";
+          cls = "svg-node-quarantine";
+        } else if (isRepStage) {
+          stroke = "#34d399";
+          fill = "#064e3b";
+          cls = "svg-node-replace";
+        }
+
+        const dash = isQuarStage ? 'stroke-dasharray="5,4"' : "";
         const role = n.is_primary ? "PRIMARY" : "BACKUP";
         const extra = n.revealed_mode && n.revealed_mode !== "honest" ? ` [${n.revealed_mode}]` : "";
+        const badgeSvg = n.new_key_badge
+          ? `<g transform="translate(${pos.x + 18}, ${pos.y - 44})">
+               <rect x="0" y="0" width="54" height="16" rx="8" fill="#059669" stroke="#6ee7b7" stroke-width="1"/>
+               <text x="27" y="11" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="800">new key</text>
+             </g>`
+          : "";
 
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        if (cls) g.setAttribute("class", cls);
         g.innerHTML = `
-          <circle cx="${pos.x}" cy="${pos.y}" r="38" fill="#0f172a" stroke="${stroke}" stroke-width="3.5" ${dash} />
+          <circle cx="${pos.x}" cy="${pos.y}" r="38" fill="${fill}" stroke="${stroke}" stroke-width="3.5" ${dash} />
           <text x="${pos.x}" y="${pos.y - 8}" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="800">${id}${extra}</text>
           <text x="${pos.x}" y="${pos.y + 8}" text-anchor="middle" fill="${stroke}" font-size="10" font-weight="700">${role} · v=${n.view}</text>
           <text x="${pos.x}" y="${pos.y + 22}" text-anchor="middle" fill="#94a3b8" font-size="9.5">seq=${n.last_exec_seq} · ${n.median_outbound_latency_ms.toFixed(0)}ms</text>
+          ${badgeSvg}
         `;
         layer.appendChild(g);
       }
@@ -599,8 +748,28 @@
       document.querySelectorAll("#manualModeBtns button").forEach(b => b.disabled = disabled);
     }
 
+    function playNextQueuedClip() {
+      if (audioPlaying || !audioQueue.length) return;
+      const clip = audioQueue.shift();
+      audioPlaying = true;
+      try {
+        const audio = new Audio(`data:${clip.mime_type};base64,${clip.audio_b64}`);
+        audio.onended = () => { audioPlaying = false; playNextQueuedClip(); };
+        audio.onerror = () => { audioPlaying = false; playNextQueuedClip(); };
+        audio.play().catch(() => { audioPlaying = false; playNextQueuedClip(); });
+      } catch (_) {
+        audioPlaying = false;
+      }
+    }
+
     let lastImgRefresh = 0;
+    let lastPlayedClipId = 0;
     function applyState(st) {
+      if (st.round !== currentRoundSeen) {
+        currentRoundSeen = st.round;
+        seenQuarantineId = 0;
+        seenReplaceId = 0;
+      }
       document.getElementById("roundLabel").textContent = `Round #${st.round}`;
       document.getElementById("modeBadge").textContent = st.fake_gemini ? "Offline (FakeGemini)" : "LIVE Gemini 4 + Decision 1";
       document.getElementById("apiCallBadge").textContent = `API: ${st.api_calls_last_min}/${st.api_calls_max_per_min} rpm`;
@@ -637,6 +806,44 @@
         document.getElementById("redHeard").textContent = `"${p.heard}"`;
         document.getElementById("redNarrative").textContent =
           `[${p.node} · ${p.mode} ${JSON.stringify(p.params || {})}] ${p.narrative}`;
+      }
+
+      if (st.red.campaign) {
+        const cmp = st.red.campaign;
+        const badge = document.getElementById("campaignRoundBadge");
+        if (cmp.round > 0) {
+          badge.textContent = `Managed Agent Red: round ${cmp.round}/${cmp.total_rounds} (${cmp.status})`;
+        } else {
+          badge.textContent = "Managed Agent Red: round 0/3";
+        }
+        if (cmp.playbook) {
+          document.getElementById("campaignPlaybook").textContent = cmp.playbook;
+        }
+      }
+
+      if (st.red.last_eviction && st.red.last_eviction.id > seenEvictionId) {
+        seenEvictionId = st.red.last_eviction.id;
+        const ageSec = (Date.now() / 1000) - (st.red.last_eviction.timestamp || 0);
+        if (ageSec < 8.0) {
+          const toast = document.getElementById("redEvictToast");
+          toast.textContent = st.red.last_eviction.message || `Red evicted from ${st.red.last_eviction.node}`;
+          toast.style.display = "block";
+          setTimeout(() => { toast.style.display = "none"; }, 4500);
+        }
+      }
+
+      // Trigger two-step quarantine + replace banner from WebSocket state events
+      const qEv = st.quarantine_event;
+      const rEv = st.replace_event;
+      const hasNewReplace = rEv && rEv.id > seenReplaceId;
+      const hasNewQuar = qEv && qEv.id > seenQuarantineId;
+      if (hasNewReplace || hasNewQuar) {
+        if (qEv) seenQuarantineId = Math.max(seenQuarantineId, qEv.id);
+        if (rEv) seenReplaceId = Math.max(seenReplaceId, rEv.id);
+        const evTs = (rEv && rEv.timestamp) || (qEv && qEv.timestamp) || 0;
+        if ((Date.now() / 1000) - evTs < 8.0) {
+          triggerQuarantineReplaceBanner(qEv, hasNewReplace ? rEv : null);
+        }
       }
 
       renderNodes(st.nodes);
@@ -723,6 +930,20 @@
         }).join(" ");
         document.getElementById("sparkLine").setAttribute("points", pts);
         document.getElementById("tpsNow").textContent = `${tl[tl.length - 1].commits_per_sec.toFixed(1)} tx/s`;
+      }
+
+      if (st.commentary) {
+        document.getElementById("commentaryToggle").checked = !!st.commentary.enabled;
+        const clips = st.commentary.clips || (st.commentary.latest_clip ? [st.commentary.latest_clip] : []);
+        if (st.commentary.enabled && clips.length) {
+          for (const c of clips) {
+            if (c && c.id > lastPlayedClipId) {
+              lastPlayedClipId = c.id;
+              audioQueue.push(c);
+            }
+          }
+          playNextQueuedClip();
+        }
       }
 
       // Refresh PNG thumbnail every 2.5s
@@ -817,8 +1038,22 @@
     });
 
     // Blue Approve / Deny & Round Reveal / Reset
-    document.getElementById("approveBtn").onclick = () => apiPost("/blue/approve", {});
+    document.getElementById("approveBtn").onclick = async () => {
+      const errBox = document.getElementById("pendingError");
+      errBox.style.display = "none";
+      const res = await fetch("/blue/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-ByzHeist-Sid": clientSid },
+        body: "{}"
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        errBox.textContent = "Approve error: " + (data.error || data.detail || `HTTP ${res.status}`);
+        errBox.style.display = "block";
+      }
+    };
     document.getElementById("denyBtn").onclick = () => apiPost("/blue/deny", {});
+    document.getElementById("commentaryToggle").onchange = (e) => apiPost("/commentary/toggle", { enabled: e.target.checked });
     document.getElementById("revealBtn").onclick = () => apiPost("/round/reveal", {});
     document.getElementById("resetBtn").onclick = async () => {
       const cal = document.getElementById("calibrationToggle").checked;

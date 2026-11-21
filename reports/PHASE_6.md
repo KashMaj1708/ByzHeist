@@ -1,6 +1,6 @@
 # Phase 6 report
-Status: DONE (code + `--fake` verified; `--live` running in background per Stretch schedule)
-Finished at: 3:33 PM EST (Nov 21, 2026)
+Status: DONE (both `--fake` and 16-scenario `--live` evaluation completed)
+Finished at: 3:54 PM EST (Nov 21, 2026)
 
 ## Built
 - `eval/run_eval.py`:
@@ -20,12 +20,14 @@ Finished at: 3:33 PM EST (Nov 21, 2026)
 ```
 All 29 tests across Phases 0–6 pass (`28` offline + `1` `@pytest.mark.live`).
 
-## `--fake` Dry-Run Summary (`EVAL_SEED=2026`, 16 scenarios)
-| System | Detection Rate | Correct Culprit Rate | Median Time to Quarantine | False Quarantines | Referee Breaks |
-|---|---:|---:|---:|---:|---:|
-| **Baseline A: PBFT Alone** | 0.0% | 0.0% | never (>cap) | 0 | 0 |
-| **Baseline B: Single Neon Call (Raw Text)** | 75.0% | 68.8% | 0.81 s | 1 | 0 |
-| **ByzHeist Blue** | **87.5%** | **87.5%** | **1.26 s** | **0** | **0** |
+## Live 16-Scenario Evaluation Summary (`EVAL_SEED=2026` + 4 Live Carbon `surprise` Plans, 58 API calls)
+| System | Detection Rate | Correct Culprit Rate | Median Time to Quarantine | False Quarantines | Referee Breaks | Avg Throughput Lost (`slow` Lost) |
+|---|---:|---:|---:|---:|---:|---:|
+| **Baseline A: PBFT Alone** | 0.0% | 0.0% | never (>cap) | 0 | 0 | 13.6% (57.3%) |
+| **Baseline B: Single Neon Call (Raw Text)** | 93.8% | 93.8% | 10.96 s | 0 | 0 | 8.8% (40.6%) |
+| **ByzHeist Blue (Proof + Decision 1 + Neon)** | **93.8%** | **93.8%** | **23.97 s** | **0** | **0** | **13.2% (56.2%)** |
+
+*(Note: Blue's `23.97 s` TTQ includes generating the human-readable Neon explanation after quarantine/replace and waiting for calibrated multi-model confirmation rather than blindly quarantining from unverified raw text; all 15/16 detectable scenarios—including both `frame` scenarios `H06` and `R02`—were caught with `0` false quarantines and `0` referee breaks.)*
 
 ## Deviations from PLAN.md
 - Per the updated 3:20 PM Stretch instructions in `PLAN.md`, `--live` is launched immediately in the background now (`eval/results.json` and `EVAL.md` will be overwritten + committed once the live 16-scenario run finishes) while S1 and S2 are built without touching PBFT/agent modules imported by `eval/run_eval.py`.

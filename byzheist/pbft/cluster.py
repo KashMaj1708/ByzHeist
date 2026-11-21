@@ -79,6 +79,8 @@ class Cluster:
         self.quarantined: set[str] = set()
         self.quarantine_events: list[dict[str, Any]] = []
         self.replace_events: list[dict[str, Any]] = []
+        self._event_seq: int = 0
+        self._replace_listeners: list[Any] = []
 
         self.replicas: dict[str, Replica] = {
             rid: Replica(
@@ -129,24 +131,47 @@ class Cluster:
                     by_id[ev_id] = ev
         return sorted(by_id.values(), key=lambda e: e.timestamp)
 
-    def quarantine(self, replica_id: str) -> None:
+    def add_replace_listener(self, callback: Any) -> None:
+        """Register callback `(replica_id, event_dict) -> None` invoked on `replace()`."""
+        self._replace_listeners.append(callback)
+
+    def quarantine(
+        self,
+        replica_id: str,
+        attack_type: str = "unknown",
+        source: str = "manual",
+    ) -> dict[str, Any]:
         """Isolate `replica_id`: all other replicas and client ignore its messages."""
         if replica_id not in self.replica_ids:
             raise ValueError(f"Unknown replica_id {replica_id!r}")
-        if replica_id in self.quarantined:
-            return
-        self.quarantined.add(replica_id)
-        for rid in self.replica_ids:
-            if rid != replica_id:
-                self.network.block_sender(rid, replica_id)
-                self.network.block_sender(replica_id, rid)
-        self.network.block_sender(self.client.client_id, replica_id)
-        self.network.block_sender(replica_id, self.client.client_id)
-        self.quarantine_events.append(
-            {"timestamp": time.time(), "mono_t": time.monotonic(), "replica_id": replica_id}
-        )
+        if replica_id not in self.quarantined:
+            self.quarantined.add(replica_id)
+            for rid in self.replica_ids:
+                if rid != replica_id:
+                    self.network.block_sender(rid, replica_id)
+                    self.network.block_sender(replica_id, rid)
+            self.network.block_sender(self.client.client_id, replica_id)
+            self.network.block_sender(replica_id, self.client.client_id)
 
-    def replace(self, replica_id: str) -> None:
+        self._event_seq += 1
+        ev = {
+            "id": self._event_seq,
+            "timestamp": time.time(),
+            "mono_t": time.monotonic(),
+            "node": replica_id,
+            "replica_id": replica_id,
+            "attack_type": attack_type,
+            "source": source,
+        }
+        self.quarantine_events.append(ev)
+        return ev
+
+    def replace(
+        self,
+        replica_id: str,
+        attack_type: str = "unknown",
+        source: str = "manual",
+    ) -> dict[str, Any]:
         """Reset `replica_id` to honest with a fresh keypair and f+1 verified state transfer."""
         if replica_id not in self.replica_ids:
             raise ValueError(f"Unknown replica_id {replica_id!r}")
@@ -266,14 +291,22 @@ class Cluster:
         self.network.unblock_sender(self.client.client_id, replica_id)
         self.network.unblock_sender(replica_id, self.client.client_id)
 
-        self.replace_events.append(
-            {
-                "timestamp": time.time(),
-                "mono_t": time.monotonic(),
-                "replica_id": replica_id,
-                "transferred_seq": fresh.last_exec_seq,
-            }
-        )
+        self._event_seq += 1
+        rep_ev = {
+            "id": self._event_seq,
+            "timestamp": time.time(),
+            "mono_t": time.monotonic(),
+            "node": replica_id,
+            "replica_id": replica_id,
+            "seq": fresh.last_exec_seq,
+            "transferred_seq": fresh.last_exec_seq,
+            "attack_type": attack_type,
+            "source": source,
+        }
+        self.replace_events.append(rep_ev)
+        for cb in list(self._replace_listeners):
+            cb(replica_id, rep_ev)
+        return rep_ev
 
     # ------------------------------------------------------------------
     # Lifecycle & load generation

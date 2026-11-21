@@ -121,6 +121,9 @@ class RedSandbox:
         self._budget = budget
         self._actor = actor
 
+    def on_node_replaced(self, callback: Callable[[str, dict[str, Any]], None]) -> None:
+        self._budget._cluster.add_replace_listener(callback)
+
     def set_fault(
         self,
         node: str,
@@ -153,11 +156,21 @@ class BlueSandbox:
         self._cluster = cluster
         self._telemetry_fn = telemetry_fn
 
-    def quarantine(self, node_id: str) -> None:
-        self._cluster.quarantine(node_id)
+    def quarantine(
+        self,
+        node_id: str,
+        attack_type: str = "unknown",
+        source: str = "manual",
+    ) -> dict[str, Any]:
+        return self._cluster.quarantine(node_id, attack_type=attack_type, source=source)
 
-    def replace(self, node_id: str) -> None:
-        self._cluster.replace(node_id)
+    def replace(
+        self,
+        node_id: str,
+        attack_type: str = "unknown",
+        source: str = "manual",
+    ) -> dict[str, Any]:
+        return self._cluster.replace(node_id, attack_type=attack_type, source=source)
 
     def read_telemetry(self) -> dict[str, Any]:
         if self._telemetry_fn is None:

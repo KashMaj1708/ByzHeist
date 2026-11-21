@@ -1,9 +1,9 @@
 {
-  "mode": "fake",
+  "mode": "live",
   "seed": 2026,
-  "timestamp": 1795293148.1502564,
-  "wall_time_sec": 100.19,
-  "api_calls_used": 60,
+  "timestamp": 1795294451.7955565,
+  "wall_time_sec": 1143.04,
+  "api_calls_used": 58,
   "num_scenarios": 16,
   "seeded_rounds": 12,
   "surprise_rounds": 4,
@@ -137,42 +137,42 @@
       "role": "primary",
       "mode": "slow",
       "params": {
-        "delay_ms": 950.0
+        "delay_ms": 1180.0
       },
-      "description": "Red surprise #1: slow on S0 \u2014 Red deploys `slow` on S0 to stress consensus stealthily."
+      "description": "Red surprise #1: slow on S0 \u2014 As reigning primary S0, we execute a surgical tar-pit attack by delaying all outbound cons"
     },
     {
       "scenario_id": "R02",
       "source": "red_surprise",
-      "node": "S1",
+      "node": "S3",
       "role": "backup",
-      "mode": "slow",
+      "mode": "frame",
       "params": {
-        "delay_ms": 950.0
+        "target": "S1"
       },
-      "description": "Red surprise #2: slow on S1 \u2014 Red deploys `slow` on S1 to stress consensus stealthily."
+      "description": "Red surprise #2: frame on S3 \u2014 While primary S1 dutifully drives consensus in round 2, backup S3 executes a surgical fram"
     },
     {
       "scenario_id": "R03",
       "source": "red_surprise",
-      "node": "S2",
+      "node": "S3",
       "role": "backup",
-      "mode": "slow",
+      "mode": "drop_votes",
       "params": {
-        "delay_ms": 950.0
+        "drop_prob": 0.65
       },
-      "description": "Red surprise #3: slow on S2 \u2014 Red deploys `slow` on S2 to stress consensus stealthily."
+      "description": "Red surprise #3: drop_votes on S3 \u2014 While S2 leads consensus in round 3, backup S3 selectively drops 65% of its PREPARE and CO"
     },
     {
       "scenario_id": "R04",
       "source": "red_surprise",
-      "node": "S3",
+      "node": "S2",
       "role": "backup",
-      "mode": "slow",
+      "mode": "drop_votes",
       "params": {
-        "delay_ms": 950.0
+        "drop_prob": 0.7
       },
-      "description": "Red surprise #4: slow on S3 \u2014 Red deploys `slow` on S3 to stress consensus stealthily."
+      "description": "Red surprise #4: drop_votes on S2 \u2014 With S3 holding the primary gavel in round 4, backup S2 executes a stealthy gray-failure a"
     }
   ],
   "summary": {
@@ -183,28 +183,28 @@
       "median_time_to_quarantine_sec": null,
       "false_quarantines": 0,
       "referee_breaks": 0,
-      "avg_throughput_lost_pct": 10.8,
-      "slow_attack_throughput_lost_pct": 25.4
+      "avg_throughput_lost_pct": 13.6,
+      "slow_attack_throughput_lost_pct": 57.3
     },
     "baseline_b": {
       "rounds": 16,
-      "detection_rate_pct": 75.0,
-      "correct_culprit_rate_pct": 68.8,
-      "median_time_to_quarantine_sec": 0.81,
-      "false_quarantines": 1,
+      "detection_rate_pct": 93.8,
+      "correct_culprit_rate_pct": 93.8,
+      "median_time_to_quarantine_sec": 10.96,
+      "false_quarantines": 0,
       "referee_breaks": 0,
-      "avg_throughput_lost_pct": 14.8,
-      "slow_attack_throughput_lost_pct": 25.0
+      "avg_throughput_lost_pct": 8.8,
+      "slow_attack_throughput_lost_pct": 40.6
     },
     "byzheist_blue": {
       "rounds": 16,
-      "detection_rate_pct": 87.5,
-      "correct_culprit_rate_pct": 87.5,
-      "median_time_to_quarantine_sec": 1.26,
+      "detection_rate_pct": 93.8,
+      "correct_culprit_rate_pct": 93.8,
+      "median_time_to_quarantine_sec": 23.97,
       "false_quarantines": 0,
       "referee_breaks": 0,
-      "avg_throughput_lost_pct": 42.1,
-      "slow_attack_throughput_lost_pct": 48.2
+      "avg_throughput_lost_pct": 13.2,
+      "slow_attack_throughput_lost_pct": 56.2
     }
   },
   "per_system": {
@@ -222,9 +222,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.42,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.09,
+        "throughput_lost_pct": 2.1
       },
       {
         "scenario_id": "H02",
@@ -239,9 +239,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.42,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.09,
+        "throughput_lost_pct": 2.1
       },
       {
         "scenario_id": "H03",
@@ -256,9 +256,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 7.13,
-        "throughput_lost_pct": 20.7
+        "warmup_tps": 5.2,
+        "attack_tps": 4.53,
+        "throughput_lost_pct": 12.9
       },
       {
         "scenario_id": "H04",
@@ -273,9 +273,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.42,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.09,
+        "throughput_lost_pct": 2.1
       },
       {
         "scenario_id": "H05",
@@ -290,9 +290,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.68,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.1,
+        "throughput_lost_pct": 1.9
       },
       {
         "scenario_id": "H06",
@@ -307,9 +307,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.67,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.1,
+        "throughput_lost_pct": 1.9
       },
       {
         "scenario_id": "H07",
@@ -324,9 +324,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.67,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.1,
+        "throughput_lost_pct": 1.9
       },
       {
         "scenario_id": "H08",
@@ -341,9 +341,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.68,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.1,
+        "throughput_lost_pct": 1.9
       },
       {
         "scenario_id": "H09",
@@ -358,9 +358,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.6,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.0,
+        "throughput_lost_pct": 3.8
       },
       {
         "scenario_id": "H10",
@@ -375,9 +375,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.6,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.0,
+        "throughput_lost_pct": 3.8
       },
       {
         "scenario_id": "H11",
@@ -392,9 +392,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 2.82,
-        "throughput_lost_pct": 68.6
+        "warmup_tps": 5.2,
+        "attack_tps": 0.77,
+        "throughput_lost_pct": 85.3
       },
       {
         "scenario_id": "H12",
@@ -409,9 +409,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.6,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.0,
+        "throughput_lost_pct": 3.9
       },
       {
         "scenario_id": "R01",
@@ -426,48 +426,14 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 2.56,
-        "throughput_lost_pct": 74.4
+        "warmup_tps": 5.2,
+        "attack_tps": 0.8,
+        "throughput_lost_pct": 84.6
       },
       {
         "scenario_id": "R02",
         "source": "red_surprise",
-        "mode": "slow",
-        "true_culprit": "S1",
-        "role": "backup",
-        "system": "baseline_a",
-        "detected": false,
-        "quarantined_node": null,
-        "correct_culprit": false,
-        "false_quarantine": false,
-        "time_to_quarantine_sec": null,
-        "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 9.68,
-        "throughput_lost_pct": 3.2
-      },
-      {
-        "scenario_id": "R03",
-        "source": "red_surprise",
-        "mode": "slow",
-        "true_culprit": "S2",
-        "role": "backup",
-        "system": "baseline_a",
-        "detected": false,
-        "quarantined_node": null,
-        "correct_culprit": false,
-        "false_quarantine": false,
-        "time_to_quarantine_sec": null,
-        "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 9.68,
-        "throughput_lost_pct": 3.2
-      },
-      {
-        "scenario_id": "R04",
-        "source": "red_surprise",
-        "mode": "slow",
+        "mode": "frame",
         "true_culprit": "S3",
         "role": "backup",
         "system": "baseline_a",
@@ -477,9 +443,43 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 9.68,
-        "throughput_lost_pct": 3.2
+        "warmup_tps": 5.2,
+        "attack_tps": 5.03,
+        "throughput_lost_pct": 3.3
+      },
+      {
+        "scenario_id": "R03",
+        "source": "red_surprise",
+        "mode": "drop_votes",
+        "true_culprit": "S3",
+        "role": "backup",
+        "system": "baseline_a",
+        "detected": false,
+        "quarantined_node": null,
+        "correct_culprit": false,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": null,
+        "referee_broke": false,
+        "warmup_tps": 5.2,
+        "attack_tps": 5.03,
+        "throughput_lost_pct": 3.3
+      },
+      {
+        "scenario_id": "R04",
+        "source": "red_surprise",
+        "mode": "drop_votes",
+        "true_culprit": "S2",
+        "role": "backup",
+        "system": "baseline_a",
+        "detected": false,
+        "quarantined_node": null,
+        "correct_culprit": false,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": null,
+        "referee_broke": false,
+        "warmup_tps": 5.2,
+        "attack_tps": 5.03,
+        "throughput_lost_pct": 3.3
       }
     ],
     "baseline_b": [
@@ -490,14 +490,14 @@
         "true_culprit": "S1",
         "role": "backup",
         "system": "baseline_b",
-        "detected": false,
-        "quarantined_node": null,
-        "correct_culprit": false,
+        "detected": true,
+        "quarantined_node": "S1",
+        "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": null,
+        "time_to_quarantine_sec": 12.649,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.42,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.04,
         "throughput_lost_pct": 0.0
       },
       {
@@ -511,10 +511,10 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.816,
+        "time_to_quarantine_sec": 10.137,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.8,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.02,
         "throughput_lost_pct": 0.0
       },
       {
@@ -528,11 +528,11 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.808,
+        "time_to_quarantine_sec": 12.313,
         "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 1.24,
-        "throughput_lost_pct": 87.6
+        "warmup_tps": 5.0,
+        "attack_tps": 4.09,
+        "throughput_lost_pct": 18.2
       },
       {
         "scenario_id": "H04",
@@ -545,10 +545,10 @@
         "quarantined_node": "S1",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.785,
+        "time_to_quarantine_sec": 10.628,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 10.18,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.05,
         "throughput_lost_pct": 0.0
       },
       {
@@ -562,11 +562,11 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.796,
+        "time_to_quarantine_sec": 11.843,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 8.79,
-        "throughput_lost_pct": 2.4
+        "warmup_tps": 5.0,
+        "attack_tps": 5.04,
+        "throughput_lost_pct": 0.0
       },
       {
         "scenario_id": "H06",
@@ -576,13 +576,13 @@
         "role": "backup",
         "system": "baseline_b",
         "detected": true,
-        "quarantined_node": "S2",
-        "correct_culprit": false,
-        "false_quarantine": true,
-        "time_to_quarantine_sec": 0.815,
+        "quarantined_node": "S1",
+        "correct_culprit": true,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": 26.883,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.81,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.0,
         "throughput_lost_pct": 0.0
       },
       {
@@ -596,10 +596,10 @@
         "quarantined_node": "S2",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.801,
+        "time_to_quarantine_sec": 9.624,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.98,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.05,
         "throughput_lost_pct": 0.0
       },
       {
@@ -615,8 +615,8 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.31,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.03,
         "throughput_lost_pct": 0.0
       },
       {
@@ -626,14 +626,14 @@
         "true_culprit": "S3",
         "role": "backup",
         "system": "baseline_b",
-        "detected": false,
-        "quarantined_node": null,
-        "correct_culprit": false,
+        "detected": true,
+        "quarantined_node": "S3",
+        "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": null,
+        "time_to_quarantine_sec": 10.32,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.42,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.03,
         "throughput_lost_pct": 0.0
       },
       {
@@ -647,10 +647,10 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.826,
+        "time_to_quarantine_sec": 9.202,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.68,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.0,
         "throughput_lost_pct": 0.0
       },
       {
@@ -664,11 +664,11 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.804,
+        "time_to_quarantine_sec": 10.231,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 2.49,
-        "throughput_lost_pct": 72.4
+        "warmup_tps": 5.0,
+        "attack_tps": 1.85,
+        "throughput_lost_pct": 63.0
       },
       {
         "scenario_id": "H12",
@@ -677,14 +677,14 @@
         "true_culprit": "S1",
         "role": "backup",
         "system": "baseline_b",
-        "detected": false,
-        "quarantined_node": null,
-        "correct_culprit": false,
+        "detected": true,
+        "quarantined_node": "S1",
+        "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": null,
+        "time_to_quarantine_sec": 11.033,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.39,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.05,
         "throughput_lost_pct": 0.0
       },
       {
@@ -698,50 +698,16 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.82,
+        "time_to_quarantine_sec": 10.964,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 2.44,
-        "throughput_lost_pct": 72.9
+        "warmup_tps": 5.0,
+        "attack_tps": 2.07,
+        "throughput_lost_pct": 58.7
       },
       {
         "scenario_id": "R02",
         "source": "red_surprise",
-        "mode": "slow",
-        "true_culprit": "S1",
-        "role": "backup",
-        "system": "baseline_b",
-        "detected": true,
-        "quarantined_node": "S1",
-        "correct_culprit": true,
-        "false_quarantine": false,
-        "time_to_quarantine_sec": 0.816,
-        "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.8,
-        "throughput_lost_pct": 0.0
-      },
-      {
-        "scenario_id": "R03",
-        "source": "red_surprise",
-        "mode": "slow",
-        "true_culprit": "S2",
-        "role": "backup",
-        "system": "baseline_b",
-        "detected": true,
-        "quarantined_node": "S2",
-        "correct_culprit": true,
-        "false_quarantine": false,
-        "time_to_quarantine_sec": 0.818,
-        "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 9.78,
-        "throughput_lost_pct": 0.0
-      },
-      {
-        "scenario_id": "R04",
-        "source": "red_surprise",
-        "mode": "slow",
+        "mode": "frame",
         "true_culprit": "S3",
         "role": "backup",
         "system": "baseline_b",
@@ -749,11 +715,45 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 0.795,
+        "time_to_quarantine_sec": 11.248,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 8.8,
-        "throughput_lost_pct": 2.2
+        "warmup_tps": 5.0,
+        "attack_tps": 4.99,
+        "throughput_lost_pct": 0.3
+      },
+      {
+        "scenario_id": "R03",
+        "source": "red_surprise",
+        "mode": "drop_votes",
+        "true_culprit": "S3",
+        "role": "backup",
+        "system": "baseline_b",
+        "detected": true,
+        "quarantined_node": "S3",
+        "correct_culprit": true,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": 10.932,
+        "referee_broke": false,
+        "warmup_tps": 5.0,
+        "attack_tps": 5.02,
+        "throughput_lost_pct": 0.0
+      },
+      {
+        "scenario_id": "R04",
+        "source": "red_surprise",
+        "mode": "drop_votes",
+        "true_culprit": "S2",
+        "role": "backup",
+        "system": "baseline_b",
+        "detected": true,
+        "quarantined_node": "S2",
+        "correct_culprit": true,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": 12.067,
+        "referee_broke": false,
+        "warmup_tps": 5.0,
+        "attack_tps": 4.98,
+        "throughput_lost_pct": 0.3
       }
     ],
     "byzheist_blue": [
@@ -768,11 +768,11 @@
         "quarantined_node": "S1",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 2.517,
+        "time_to_quarantine_sec": 18.268,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.36,
-        "throughput_lost_pct": 29.4
+        "warmup_tps": 5.0,
+        "attack_tps": 4.99,
+        "throughput_lost_pct": 0.3
       },
       {
         "scenario_id": "H02",
@@ -785,11 +785,11 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.265,
+        "time_to_quarantine_sec": 26.584,
         "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 5.53,
-        "throughput_lost_pct": 44.7
+        "warmup_tps": 5.0,
+        "attack_tps": 4.93,
+        "throughput_lost_pct": 1.4
       },
       {
         "scenario_id": "H03",
@@ -802,11 +802,11 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.332,
+        "time_to_quarantine_sec": 26.078,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 2.25,
-        "throughput_lost_pct": 75.0
+        "warmup_tps": 5.0,
+        "attack_tps": 4.37,
+        "throughput_lost_pct": 12.7
       },
       {
         "scenario_id": "H04",
@@ -819,11 +819,11 @@
         "quarantined_node": "S1",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.261,
+        "time_to_quarantine_sec": 30.332,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.35,
-        "throughput_lost_pct": 29.5
+        "warmup_tps": 5.2,
+        "attack_tps": 4.98,
+        "throughput_lost_pct": 4.3
       },
       {
         "scenario_id": "H05",
@@ -836,11 +836,11 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.344,
+        "time_to_quarantine_sec": 22.34,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 5.95,
-        "throughput_lost_pct": 33.9
+        "warmup_tps": 5.0,
+        "attack_tps": 4.97,
+        "throughput_lost_pct": 0.6
       },
       {
         "scenario_id": "H06",
@@ -849,15 +849,15 @@
         "true_culprit": "S1",
         "role": "backup",
         "system": "byzheist_blue",
-        "detected": false,
-        "quarantined_node": null,
-        "correct_culprit": false,
+        "detected": true,
+        "quarantined_node": "S1",
+        "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": null,
+        "time_to_quarantine_sec": 5.984,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.23,
-        "throughput_lost_pct": 30.7
+        "warmup_tps": 5.0,
+        "attack_tps": 4.92,
+        "throughput_lost_pct": 1.6
       },
       {
         "scenario_id": "H07",
@@ -870,11 +870,11 @@
         "quarantined_node": "S2",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.264,
+        "time_to_quarantine_sec": 39.224,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.33,
-        "throughput_lost_pct": 29.7
+        "warmup_tps": 5.0,
+        "attack_tps": 4.95,
+        "throughput_lost_pct": 1.1
       },
       {
         "scenario_id": "H08",
@@ -889,9 +889,9 @@
         "false_quarantine": false,
         "time_to_quarantine_sec": null,
         "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 6.19,
-        "throughput_lost_pct": 38.1
+        "warmup_tps": 5.0,
+        "attack_tps": 4.76,
+        "throughput_lost_pct": 4.8
       },
       {
         "scenario_id": "H09",
@@ -904,11 +904,11 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.209,
+        "time_to_quarantine_sec": 15.935,
         "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 5.79,
-        "throughput_lost_pct": 42.1
+        "warmup_tps": 5.0,
+        "attack_tps": 4.97,
+        "throughput_lost_pct": 0.6
       },
       {
         "scenario_id": "H10",
@@ -921,11 +921,11 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.299,
+        "time_to_quarantine_sec": 23.97,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 5.39,
-        "throughput_lost_pct": 40.1
+        "warmup_tps": 5.0,
+        "attack_tps": 4.94,
+        "throughput_lost_pct": 1.2
       },
       {
         "scenario_id": "H11",
@@ -938,11 +938,11 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.273,
+        "time_to_quarantine_sec": 33.379,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 2.36,
-        "throughput_lost_pct": 73.8
+        "warmup_tps": 5.0,
+        "attack_tps": 0.81,
+        "throughput_lost_pct": 83.8
       },
       {
         "scenario_id": "H12",
@@ -955,11 +955,11 @@
         "quarantined_node": "S1",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.184,
+        "time_to_quarantine_sec": 20.514,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.76,
-        "throughput_lost_pct": 24.9
+        "warmup_tps": 5.0,
+        "attack_tps": 4.87,
+        "throughput_lost_pct": 2.7
       },
       {
         "scenario_id": "R01",
@@ -972,50 +972,16 @@
         "quarantined_node": "S0",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.287,
+        "time_to_quarantine_sec": 46.412,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 1.55,
-        "throughput_lost_pct": 82.7
+        "warmup_tps": 5.0,
+        "attack_tps": 0.8,
+        "throughput_lost_pct": 84.1
       },
       {
         "scenario_id": "R02",
         "source": "red_surprise",
-        "mode": "slow",
-        "true_culprit": "S1",
-        "role": "backup",
-        "system": "byzheist_blue",
-        "detected": true,
-        "quarantined_node": "S1",
-        "correct_culprit": true,
-        "false_quarantine": false,
-        "time_to_quarantine_sec": 1.216,
-        "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.58,
-        "throughput_lost_pct": 26.9
-      },
-      {
-        "scenario_id": "R03",
-        "source": "red_surprise",
-        "mode": "slow",
-        "true_culprit": "S2",
-        "role": "backup",
-        "system": "byzheist_blue",
-        "detected": true,
-        "quarantined_node": "S2",
-        "correct_culprit": true,
-        "false_quarantine": false,
-        "time_to_quarantine_sec": 1.261,
-        "referee_broke": false,
-        "warmup_tps": 10.0,
-        "attack_tps": 5.55,
-        "throughput_lost_pct": 44.5
-      },
-      {
-        "scenario_id": "R04",
-        "source": "red_surprise",
-        "mode": "slow",
+        "mode": "frame",
         "true_culprit": "S3",
         "role": "backup",
         "system": "byzheist_blue",
@@ -1023,11 +989,45 @@
         "quarantined_node": "S3",
         "correct_culprit": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 1.224,
+        "time_to_quarantine_sec": 6.428,
         "referee_broke": false,
-        "warmup_tps": 9.0,
-        "attack_tps": 6.54,
-        "throughput_lost_pct": 27.4
+        "warmup_tps": 5.0,
+        "attack_tps": 4.83,
+        "throughput_lost_pct": 3.4
+      },
+      {
+        "scenario_id": "R03",
+        "source": "red_surprise",
+        "mode": "drop_votes",
+        "true_culprit": "S3",
+        "role": "backup",
+        "system": "byzheist_blue",
+        "detected": true,
+        "quarantined_node": "S3",
+        "correct_culprit": true,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": 22.309,
+        "referee_broke": false,
+        "warmup_tps": 5.0,
+        "attack_tps": 4.87,
+        "throughput_lost_pct": 2.5
+      },
+      {
+        "scenario_id": "R04",
+        "source": "red_surprise",
+        "mode": "drop_votes",
+        "true_culprit": "S2",
+        "role": "backup",
+        "system": "byzheist_blue",
+        "detected": true,
+        "quarantined_node": "S2",
+        "correct_culprit": true,
+        "false_quarantine": false,
+        "time_to_quarantine_sec": 39.959,
+        "referee_broke": false,
+        "warmup_tps": 5.0,
+        "attack_tps": 4.68,
+        "throughput_lost_pct": 6.4
       }
     ]
   },
@@ -1045,46 +1045,46 @@
       "false_quarantine": false,
       "time_to_quarantine_sec": null,
       "referee_broke": false,
-      "warmup_tps": 10.0,
-      "attack_tps": 6.19,
-      "throughput_lost_pct": 38.1,
+      "warmup_tps": 5.0,
+      "attack_tps": 4.76,
+      "throughput_lost_pct": 4.8,
       "analysis": "Replica S2 ran `lie_reply` (sending fake replies only to the client). Because PBFT client quorum (`f+1=2` matching replies) masks a lone lying reply and replica-to-replica consensus traffic stays 100% honest, peer telemetry showed zero consensus anomalies while money remained 100% conserved."
     },
     {
-      "scenario_id": "H06",
-      "source": "seeded_2026",
-      "mode": "frame",
-      "true_culprit": "S1",
-      "role": "backup",
+      "scenario_id": "R01",
+      "source": "red_surprise",
+      "mode": "slow",
+      "true_culprit": "S0",
+      "role": "primary",
       "system": "byzheist_blue",
-      "detected": false,
-      "quarantined_node": null,
-      "correct_culprit": false,
+      "detected": true,
+      "quarantined_node": "S0",
+      "correct_culprit": true,
       "false_quarantine": false,
-      "time_to_quarantine_sec": null,
+      "time_to_quarantine_sec": 46.412,
       "referee_broke": false,
-      "warmup_tps": 9.0,
-      "attack_tps": 6.23,
-      "throughput_lost_pct": 30.7,
-      "analysis": "Replica S1 ran `frame` (backup); Blue kept monitoring without crossing the quarantine confidence threshold before the 30 s cap."
+      "warmup_tps": 5.0,
+      "attack_tps": 0.8,
+      "throughput_lost_pct": 84.1,
+      "analysis": "Blue caught and replaced S0 (`slow`), but required 46.412s and experienced 84.1% throughput loss before recovery completed."
     },
     {
-      "scenario_id": "H01",
-      "source": "seeded_2026",
+      "scenario_id": "R04",
+      "source": "red_surprise",
       "mode": "drop_votes",
-      "true_culprit": "S1",
+      "true_culprit": "S2",
       "role": "backup",
       "system": "byzheist_blue",
       "detected": true,
-      "quarantined_node": "S1",
+      "quarantined_node": "S2",
       "correct_culprit": true,
       "false_quarantine": false,
-      "time_to_quarantine_sec": 2.517,
+      "time_to_quarantine_sec": 39.959,
       "referee_broke": false,
-      "warmup_tps": 9.0,
-      "attack_tps": 6.36,
-      "throughput_lost_pct": 29.4,
-      "analysis": "Blue caught and replaced S1 (`drop_votes`), but required 2.517s and experienced 29.4% throughput loss before recovery completed."
+      "warmup_tps": 5.0,
+      "attack_tps": 4.68,
+      "throughput_lost_pct": 6.4,
+      "analysis": "Blue caught and replaced S2 (`drop_votes`), but required 39.959s and experienced 6.4% throughput loss before recovery completed."
     }
   ]
 }

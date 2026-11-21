@@ -22,6 +22,7 @@ from byzheist import config, referee, telemetry
 from byzheist.agents.blue import BlueWatchdog
 from byzheist.agents.gemini import FakeGemini, GeminiBackend, has_api_key
 from byzheist.agents.red import RedAttacker
+from byzheist.agents.tts import ArenaCommentator
 from byzheist.pbft.cluster import Cluster
 
 
@@ -50,6 +51,9 @@ def _is_authorized(headers: Any, cookies: dict[str, str], client_host: str, acce
     if not access_code:
         return True
     if _is_direct_localhost(headers, client_host):
+        return True
+    hdr_code = (headers.get("x-arena-access-code") or "").strip()
+    if hdr_code and hmac.compare_digest(hdr_code, access_code):
         return True
     token = cookies.get(AUTH_COOKIE_NAME, "")
     if not token:
@@ -129,6 +133,12 @@ class ArenaState:
         self.gemini: GeminiBackend | FakeGemini = (
             FakeGemini() if self.use_fake_gemini else GeminiBackend()
         )
+        self.commentator = ArenaCommentator(
+            counter=self.gemini.counter,
+            use_fake=self.use_fake_gemini,
+            min_interval_sec=8.0,
+        )
+        self._referee_broken_announced: bool = False
 
         self.round_number: int = 0
         self.revealed: bool = False
@@ -141,6 +151,18 @@ class ArenaState:
         # Shared Red seat lock (60s inactivity timeout)
         self.red_seat_holder: str | None = None
         self.red_seat_expires_mono: float = 0.0
+
+        # Stretch S1: Antigravity Managed Agent campaign status + playbook
+        playbook_file = config.OUT_DIR / "red_playbook.md"
+        initial_pb = playbook_file.read_text(encoding="utf-8") if playbook_file.is_file() else ""
+        self.campaign_state: dict[str, Any] = {
+            "active": False,
+            "round": 3 if initial_pb else 0,
+            "total_rounds": 3,
+            "status": "complete" if initial_pb else "idle",
+            "playbook": initial_pb,
+        }
+        self._baseline_tps: float = max(0.5, load_rate_hz)
 
         self._ws_clients: dict[WebSocket, str] = {}
         self._broadcast_task: asyncio.Task[None] | None = None
@@ -171,14 +193,42 @@ class ArenaState:
     async def _init_round(self, calibration: bool = False) -> None:
         self.round_number += 1
         self.revealed = False
+        self._referee_broken_announced = False
         cluster = Cluster(seed=1000 + self.round_number, calibration=calibration)
         await cluster.start()
+
+        def _on_blue_event(ev: dict[str, Any]) -> None:
+            mode = ev.get("mode", "")
+            if mode == "proof_conviction":
+                suspect = ev.get("suspect")
+                atk = ev.get("attack_type")
+                rep_ev = ev.get("replace_event") or {}
+                seq = rep_ev.get("seq", 0)
+
+                async def _announce_pair() -> None:
+                    await self.commentator.announce(
+                        "blue_verdict",
+                        f"Replica {suspect} quarantined on cryptographic proof of {atk}!",
+                        force=True,
+                    )
+                    await self.commentator.announce(
+                        "replace_done",
+                        f"Replica {suspect} replaced with fresh key and state transferred at sequence {seq}.",
+                        force=True,
+                    )
+
+                asyncio.create_task(_announce_pair())
+            elif mode == "pending_quarantine":
+                pq = ev.get("pending_quarantine") or {}
+                line = f"Blue watchdog flagged {pq.get('suspect')} for {pq.get('attack_type')}, awaiting human approval."
+                asyncio.create_task(self.commentator.announce("blue_verdict", line))
 
         blue_sb = cluster.budget.blue_interface(telemetry_fn=lambda: telemetry.snapshot(cluster))
         blue = BlueWatchdog(
             sandbox=blue_sb,
             gemini=self.gemini,
             interval_sec=self.blue_interval_sec,
+            on_event=_on_blue_event,
         )
 
         def _red_status() -> dict[str, Any]:
@@ -270,6 +320,18 @@ class ArenaState:
 
         honest_ids = cluster._honest_ids()
         ref = referee.check(cluster, honest_ids=honest_ids)
+        if (not ref["total_ok"] or not ref["agreement_ok"]) and not self._referee_broken_announced:
+            self._referee_broken_announced = True
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(
+                    self.commentator.announce(
+                        "referee_break",
+                        "Alert! Colluding Byzantine attack broke honest replica agreement!",
+                    )
+                )
+            except RuntimeError:
+                pass
         # Display conserved total across honest replicas (or minimum if broken)
         honest_totals = [ref["totals_per_replica"][r] for r in honest_ids] or [10_000]
         bank_total = honest_totals[0] if len(set(honest_totals)) == 1 else min(honest_totals)
@@ -278,7 +340,12 @@ class ArenaState:
         replacing_set = {
             ev["replica_id"]
             for ev in cluster.replace_events
-            if (now_mono - ev["mono_t"]) <= 3.5
+            if (now_mono - ev["mono_t"]) <= 3.0
+        }
+        new_key_set = {
+            ev["replica_id"]
+            for ev in cluster.replace_events
+            if (now_mono - ev["mono_t"]) <= 10.0
         }
         suspected_id: str | None = None
         if blue.pending_quarantine:
@@ -312,6 +379,7 @@ class ArenaState:
                 "commits_per_sec": ri["commits_per_sec"],
                 "median_outbound_latency_ms": ri["median_outbound_latency_ms"],
                 "quarantined": ri["quarantined"],
+                "new_key_badge": rid in new_key_set,
             }
             if self.revealed:
                 node_entry["revealed_mode"] = cluster._faults[rid].mode
@@ -331,6 +399,31 @@ class ArenaState:
             if ev["src"] != ev["dst"]
         ]
 
+        clean_q_events = [
+            {
+                "id": ev.get("id", idx + 1),
+                "timestamp": ev["timestamp"],
+                "node": ev.get("node", ev["replica_id"]),
+                "replica_id": ev["replica_id"],
+                "attack_type": ev.get("attack_type", "unknown"),
+                "source": ev.get("source", "manual"),
+            }
+            for idx, ev in enumerate(cluster.quarantine_events[-10:])
+        ]
+        clean_rep_events = [
+            {
+                "id": ev.get("id", idx + 1),
+                "timestamp": ev["timestamp"],
+                "node": ev.get("node", ev["replica_id"]),
+                "replica_id": ev["replica_id"],
+                "seq": ev.get("seq", ev.get("transferred_seq", 0)),
+                "transferred_seq": ev.get("transferred_seq", 0),
+                "attack_type": ev.get("attack_type", "unknown"),
+                "source": ev.get("source", "manual"),
+            }
+            for idx, ev in enumerate(cluster.replace_events[-10:])
+        ]
+
         return {
             "round": self.round_number,
             "revealed": self.revealed,
@@ -345,6 +438,10 @@ class ArenaState:
             "bus_messages": bus_msgs,
             "throughput_timeline": snap["cluster"]["throughput_timeline"],
             "verified_evidence": snap["verified_evidence"],
+            "quarantine_events": clean_q_events,
+            "replace_events": clean_rep_events,
+            "quarantine_event": clean_q_events[-1] if clean_q_events else None,
+            "replace_event": clean_rep_events[-1] if clean_rep_events else None,
             "blue": {
                 "decision": blue.latest_decision,
                 "neon_verdict": blue.latest_neon_verdict,
@@ -357,9 +454,16 @@ class ArenaState:
                 "latest_plan": red.latest_plan.to_dict() if red.latest_plan else None,
                 "active_node": red.active_node if self.seat_status_for(client_sid)["is_yours"] or self.revealed else None,
                 "active_mode": red.active_mode if self.seat_status_for(client_sid)["is_yours"] or self.revealed else None,
+                "last_eviction": red.last_eviction,
                 "history": red.history[-8:] if self.seat_status_for(client_sid)["is_yours"] or self.revealed else [],
+                "campaign": self.campaign_state,
             },
             "anti_cheat_log": cluster.budget.anti_cheat_log[-20:],
+            "commentary": {
+                "enabled": self.commentator.enabled,
+                "latest_clip": self.commentator.latest_clip,
+                "clips": list(self.commentator.history)[-5:],
+            },
         }
 
     async def _ws_push_loop(self) -> None:
@@ -500,6 +604,74 @@ def create_app(
         finally:
             arena._ws_clients.pop(ws, None)
 
+    @app.get("/red/status")
+    async def red_status(request: Request) -> JSONResponse:
+        _require_auth(request)
+        assert arena.cluster is not None and arena.blue is not None and arena.red is not None
+        snap = arena.blue.latest_snapshot or telemetry.snapshot(arena.cluster)
+        primary = next(
+            (rid for rid, ri in snap["replicas"].items() if ri["is_primary"]),
+            "S0",
+        )
+        active_node = arena.red.active_node
+        blue_suspect: str | None = None
+        if arena.blue.pending_quarantine:
+            blue_suspect = arena.blue.pending_quarantine.get("suspect")
+        elif arena.blue.latest_decision:
+            blue_suspect = arena.blue.latest_decision.get("suspect", {}).get("choice")
+
+        was_replaced = bool(
+            active_node
+            and any(ev["replica_id"] == active_node for ev in arena.cluster.replace_events)
+        )
+        flagged_by_blue = bool(
+            active_node
+            and (
+                blue_suspect == active_node
+                or active_node in arena.cluster.quarantined
+                or was_replaced
+            )
+        )
+
+        honest_cps = [
+            float(ri["commits_per_sec"])
+            for rid, ri in snap["replicas"].items()
+            if not ri["quarantined"]
+        ]
+        recent_cps = round(sum(honest_cps) / max(1, len(honest_cps)), 2)
+        base_cps = max(0.5, arena._baseline_tps)
+        impact_pct = round(max(0.0, min(100.0, (1.0 - (recent_cps / base_cps)) * 100.0)), 1)
+
+        return JSONResponse(
+            {
+                "round": arena.round_number,
+                "primary": primary,
+                "active_node": active_node,
+                "active_mode": "replaced_to_honest" if was_replaced else arena.red.active_mode,
+                "active_params": arena.red.active_params,
+                "flagged_by_blue": flagged_by_blue,
+                "was_quarantined_or_replaced": was_replaced or (active_node in arena.cluster.quarantined if active_node else False),
+                "blue_suspect": blue_suspect,
+                "pending_quarantine": arena.blue.pending_quarantine is not None,
+                "quarantined_nodes": sorted(arena.cluster.quarantined),
+                "throughput_recent_cps": recent_cps,
+                "throughput_impact_pct": impact_pct,
+            }
+        )
+
+    @app.post("/campaign/update")
+    async def campaign_update(request: Request) -> JSONResponse:
+        _require_auth(request)
+        body = await request.json()
+        arena.campaign_state = {
+            "active": bool(body.get("active", False)),
+            "round": int(body.get("round", 0)),
+            "total_rounds": int(body.get("total_rounds", 3)),
+            "status": str(body.get("status", "idle")),
+            "playbook": str(body.get("playbook") or arena.campaign_state.get("playbook", "")),
+        }
+        return JSONResponse({"ok": True, "campaign": arena.campaign_state})
+
     @app.post("/red/voice")
     async def red_voice(request: Request) -> JSONResponse:
         _require_auth(request)
@@ -514,6 +686,12 @@ def create_app(
             audio_mime_type=content_type or "audio/webm",
             apply=True,
         )
+        if res.get("applied") and res.get("plan"):
+            p = res["plan"]
+            await arena.commentator.announce(
+                "red_plan_applied",
+                f"Red voice attack deployed {p['mode']} on replica {p['node']}.",
+            )
         return JSONResponse(res)
 
     @app.post("/red/text")
@@ -526,6 +704,12 @@ def create_app(
         if not text:
             raise HTTPException(status_code=400, detail="Missing `text` field")
         res = await arena.red.plan(text, apply=True)
+        if res.get("applied") and res.get("plan"):
+            p = res["plan"]
+            await arena.commentator.announce(
+                "red_plan_applied",
+                f"Red attacker deployed {p['mode']} on replica {p['node']}.",
+            )
         return JSONResponse(res)
 
     @app.post("/red/surprise")
@@ -534,6 +718,12 @@ def create_app(
         _require_red_seat(request)
         assert arena.red is not None
         res = await arena.red.plan("surprise", apply=True)
+        if res.get("applied") and res.get("plan"):
+            p = res["plan"]
+            await arena.commentator.announce(
+                "red_plan_applied",
+                f"Red surprise plan deployed {p['mode']} on replica {p['node']}.",
+            )
         return JSONResponse(res)
 
     @app.post("/red/manual")
@@ -556,6 +746,11 @@ def create_app(
                 }
             )
         res = arena.red.set_manual_fault(node=node, mode=mode, params=params)
+        if res.ok and mode != "honest":
+            await arena.commentator.announce(
+                "red_plan_applied",
+                f"Manual override set {mode} fault on replica {node}.",
+            )
         return JSONResponse(
             {
                 "ok": res.ok,
@@ -573,7 +768,40 @@ def create_app(
         _require_auth(request)
         assert arena.blue is not None
         approved = arena.blue.approve_pending()
-        return JSONResponse({"ok": approved is not None, "approved": approved})
+        if approved is None:
+            return JSONResponse({"ok": False, "approved": None})
+        if not approved.get("ok", True):
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": approved.get("error", "Quarantine/replace failed"),
+                    "detail": approved.get("error", "Quarantine/replace failed"),
+                    "traceback": approved.get("traceback", ""),
+                },
+                status_code=500,
+            )
+        node = approved["node"]
+        atk = approved.get("attack_type", "unknown")
+        seq = approved.get("seq", 0)
+        await arena.commentator.announce(
+            "quarantine_approved",
+            f"Quarantine approved! Replica {node} isolated for {atk}.",
+            force=True,
+        )
+        await arena.commentator.announce(
+            "replace_done",
+            f"Replica {node} replaced with fresh key and state transferred at sequence {seq}.",
+            force=True,
+        )
+        return JSONResponse({"ok": True, "approved": approved})
+
+    @app.post("/commentary/toggle")
+    async def commentary_toggle(request: Request) -> JSONResponse:
+        _require_auth(request)
+        body = await request.json()
+        enabled = bool(body.get("enabled", False))
+        arena.commentator.set_enabled(enabled)
+        return JSONResponse({"ok": True, "enabled": arena.commentator.enabled})
 
     @app.post("/blue/deny")
     async def blue_deny(request: Request) -> JSONResponse:
