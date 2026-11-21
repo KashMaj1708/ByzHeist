@@ -160,6 +160,10 @@ class BlueWatchdog:
 
         self._handled_evidence_keys: set[str] = set()
         self._last_neon_mono: float = -1e9
+        self._has_called_decision_once: bool = False
+        self._baseline_cps: float = 0.0
+        self._last_evidence_count: int = 0
+        self._is_idle: bool = False
         self._task: asyncio.Task[None] | None = None
         self._running: bool = False
 
@@ -188,9 +192,47 @@ class BlueWatchdog:
         try:
             while self._running:
                 await self.step()
-                await asyncio.sleep(self.interval_sec)
+                sleep_s = (
+                    max(self.interval_sec * 2.0, config.BLUE_IDLE_INTERVAL_SEC)
+                    if self._is_idle and self.interval_sec >= config.BLUE_INTERVAL_SEC
+                    else (self.interval_sec * 2.0 if self._is_idle else self.interval_sec)
+                )
+                await asyncio.sleep(sleep_s)
         except asyncio.CancelledError:
             return
+
+    def _should_skip_idle_decision(self, snap: dict[str, Any]) -> bool:
+        """Skip Decision 1 when nothing new happened since last call (still renders PNG)."""
+        if not self._has_called_decision_once:
+            return False
+        if self.pending_quarantine is not None:
+            return False
+        if len(snap.get("verified_evidence", [])) != self._last_evidence_count:
+            return False
+
+        matrix = snap.get("problem_matrix", [])
+        max_cell = max((float(v) for row in matrix for v in row), default=0.0)
+        if max_cell >= 5.0:
+            return False
+
+        replicas = snap.get("replicas", {})
+        max_lat = max(
+            (float(ri.get("median_outbound_latency_ms", 0.0)) for ri in replicas.values() if not ri.get("quarantined")),
+            default=0.0,
+        )
+        if max_lat >= 80.0:
+            return False
+
+        active_cps = [
+            float(ri.get("commits_per_sec", 0.0))
+            for ri in replicas.values()
+            if not ri.get("quarantined")
+        ]
+        mean_cps = sum(active_cps) / max(1, len(active_cps))
+        if self._baseline_cps > 0.5:
+            if abs(mean_cps - self._baseline_cps) > 0.20 * self._baseline_cps:
+                return False
+        return True
 
     async def step(self) -> dict[str, Any]:
         """Execute one Blue watchdog tick: snapshot -> PNG -> proof check -> Decision 1 -> Neon."""
@@ -257,11 +299,24 @@ class BlueWatchdog:
                 }
             )
 
-        # 2. Unprovable anomaly path: Gemini Decision 1 on PNG + compact summary
+        # 2. Idle check: skip Decision 1 when telemetry shows nothing new since last call
+        if self._should_skip_idle_decision(snap):
+            self._is_idle = True
+            return self._emit(
+                {
+                    "timestamp": time.time(),
+                    "mode": "idle_skipped",
+                    "decision": self.latest_decision,
+                    "pending_quarantine": None,
+                    "auto_quarantined": False,
+                }
+            )
+
+        # 3. Unprovable anomaly path: Gemini Decision 1 on PNG + compact summary
         summary_text = _compact_summary_for_blue(snap)
         try:
             answers: dict[str, DecisionAnswer] = await self.gemini.decide(
-                png_bytes, summary_text, BLUE_DECISION_QUESTIONS
+                png_bytes, summary_text, BLUE_DECISION_QUESTIONS, priority="background"
             )
         except RateLimitExceededError as exc:
             return self._emit(
@@ -272,10 +327,26 @@ class BlueWatchdog:
                 }
             )
 
+        self._has_called_decision_once = True
+        self._last_evidence_count = len(snap.get("verified_evidence", []))
         decision_dict = {k: v.to_dict() for k, v in answers.items()}
         self.latest_decision = decision_dict
 
         p_attack = float(answers["under_attack"].noul or 0.0)
+        if p_attack < 0.35:
+            active_cps = [
+                float(ri.get("commits_per_sec", 0.0))
+                for ri in snap.get("replicas", {}).values()
+                if not ri.get("quarantined")
+            ]
+            mean_cps = sum(active_cps) / max(1, len(active_cps))
+            if mean_cps > 0.0:
+                self._baseline_cps = (
+                    mean_cps if self._baseline_cps <= 0.0 else (0.7 * self._baseline_cps + 0.3 * mean_cps)
+                )
+            self._is_idle = True
+        else:
+            self._is_idle = False
         suspect = str(answers["suspect"].choice or "other")
         suspect_conf = float(answers["suspect"].confidence)
         attack_type = str(answers["attack_type"].choice or "other")
@@ -464,6 +535,37 @@ class BlueWatchdog:
         self.timeline.append(entry)
         self._emit({"timestamp": entry["timestamp"], "mode": "human_approved", **entry})
         return entry
+
+    async def explain_human_approval(self, approved: dict[str, Any]) -> str:
+        """Generate a concise Neon explanation after a judge approves quarantine (uses judge pool)."""
+        node = approved.get("node", approved.get("replica_id", "S?"))
+        atk = approved.get("attack_type", "Byzantine anomaly")
+        seq = approved.get("seq", 0)
+        prompt = (
+            f"Write ONE concise sentence for bank operators confirming human-approved quarantine "
+            f"and replacement of replica {node} ({atk}), with fresh Ed25519 key and state "
+            f"transferred at seq={seq} while bank total stayed at 10,000."
+        )
+        parts: list[dict[str, Any]] = []
+        if self.latest_png:
+            parts.append(image_part(self.latest_png))
+        parts.append(text_part(prompt))
+        try:
+            txt = await self.gemini.reason(
+                model=config.MODEL_IDS["frontier_fast"],
+                inputs=parts,
+                schema=None,
+                thinking_level="low",
+                priority="judge",
+            )
+            out = str(txt).strip()
+            if out:
+                self.latest_explanation = out
+            return out
+        except Exception:
+            fallback = f"Operator approved quarantine & replacement of {node} ({atk}) at seq={seq}."
+            self.latest_explanation = fallback
+            return fallback
 
     def deny_pending(self) -> dict[str, Any] | None:
         """Human operator denies pending quarantine."""

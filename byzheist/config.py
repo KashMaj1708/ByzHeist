@@ -32,9 +32,11 @@ ATTACKER_ACCOUNT: str = "A99"
 
 # Agent cadences, evaluation seed, and API fair-use cap
 BLUE_INTERVAL_SEC: float = 3.0
+BLUE_IDLE_INTERVAL_SEC: float = 6.0
 NEON_MIN_INTERVAL_SEC: float = 15.0
 RED_ADAPT_INTERVAL_SEC: float = 10.0
 MAX_CALLS_PER_MIN: int = 30
+JUDGE_RESERVED_CALLS_PER_MIN: int = 8
 EVAL_SEED: int = 2026
 
 # Verified model identifiers from the Gemini 4 NYC Hackathon Builder Guide

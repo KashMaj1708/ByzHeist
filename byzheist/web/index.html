@@ -954,8 +954,31 @@
       }
     }
 
-    async function apiPost(path, bodyObj, rawBlob, contentType) {
-      const headers = { "X-ByzHeist-Sid": clientSid };
+    let retryCountdownTimer = null;
+    function showRedBreathMessage(retrySec) {
+      if (retryCountdownTimer) clearInterval(retryCountdownTimer);
+      let rem = Math.max(1, Math.round(retrySec || 4));
+      const heardEl = document.getElementById("redHeard");
+      const narrEl = document.getElementById("redNarrative");
+      const updateTxt = () => {
+        heardEl.textContent = `Red is catching its breath, try again in ${rem}s`;
+        narrEl.textContent = "Judge capacity temporarily busy — ready again shortly.";
+      };
+      updateTxt();
+      retryCountdownTimer = setInterval(() => {
+        rem -= 1;
+        if (rem <= 0) {
+          clearInterval(retryCountdownTimer);
+          retryCountdownTimer = null;
+          heardEl.textContent = "Ready — speak or type your next command.";
+        } else {
+          updateTxt();
+        }
+      }, 1000);
+    }
+
+    async function apiPost(path, bodyObj, rawBlob, contentType, extraHeaders) {
+      const headers = Object.assign({ "X-ByzHeist-Sid": clientSid }, extraHeaders || {});
       let body;
       if (rawBlob) {
         headers["Content-Type"] = contentType || "audio/webm";
@@ -966,8 +989,17 @@
       }
       const res = await fetch(path, { method: "POST", headers, body });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 429 || res.status === 503) {
+        showRedBreathMessage(data.retry_after_s || 4);
+        return data;
+      }
+      if (res.status === 400 && path.startsWith("/red/")) {
+        document.getElementById("redHeard").textContent =
+          data.error || data.detail || "Didn't catch that, hold the button while you speak";
+        return data;
+      }
       if (!res.ok) {
-        alert(data.detail || `Error ${res.status}`);
+        alert(data.detail || data.error || `Error ${res.status}`);
         throw new Error(data.detail || `HTTP ${res.status}`);
       }
       return data;
@@ -1073,6 +1105,7 @@
     let audioChunks = [];
     let audioCtx = null;
     let meterAnim = null;
+    let recordStartMs = 0;
 
     async function startRecording() {
       const micBtn = document.getElementById("micBtn");
@@ -1104,21 +1137,32 @@
 
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
         mediaRecorder.onstop = async () => {
+          const durationMs = Math.max(0, Date.now() - recordStartMs);
           cancelAnimationFrame(meterAnim);
           meterEl.style.width = "0%";
           stream.getTracks().forEach(t => t.stop());
           if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
           const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
-          if (blob.size < 100) return;
+          if (durationMs < 500 || blob.size < 2048) {
+            document.getElementById("redHeard").textContent = "Didn't catch that, hold the button while you speak";
+            return;
+          }
           document.getElementById("redHeard").textContent = "Uploading voice command to Gemini 4 Carbon...";
-          const res = await apiPost("/red/voice", null, blob, blob.type || "audio/webm");
-          if (res.plan) {
+          const res = await apiPost(
+            "/red/voice",
+            null,
+            blob,
+            blob.type || "audio/webm",
+            { "X-Audio-Duration-Ms": String(durationMs) }
+          );
+          if (res && res.plan) {
             document.getElementById("redHeard").textContent = `"${res.plan.heard}"`;
             document.getElementById("redNarrative").textContent =
               `[${res.plan.node} · ${res.plan.mode}] (${res.applied ? "APPLIED" : "BLOCKED: " + res.reason}) ${res.plan.narrative}`;
           }
         };
 
+        recordStartMs = Date.now();
         mediaRecorder.start();
         micBtn.classList.add("recording");
         micBtn.textContent = "Recording... Release to Send to Carbon";

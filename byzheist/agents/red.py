@@ -239,6 +239,7 @@ class RedAttacker:
             schema=AttackPlanSchema,
             thinking_level="medium",
             system_instruction=RED_SYSTEM_PROMPT,
+            priority="judge",
         )
         attack_plan = AttackPlan.from_schema(raw_plan)
         self.latest_plan = attack_plan

@@ -155,29 +155,79 @@ class DecisionAnswer:
 
 
 class CallBudgetCounter:
-    """Sliding 60-second window rate-limit guard enforcing `MAX_CALLS_PER_MIN`."""
+    """Sliding 60s rate-limit guard splitting capacity into judge-reserved + background pools."""
 
-    def __init__(self, max_calls_per_min: int = config.MAX_CALLS_PER_MIN) -> None:
+    def __init__(
+        self,
+        max_calls_per_min: int = config.MAX_CALLS_PER_MIN,
+        judge_reserved_per_min: int | None = None,
+    ) -> None:
         self.max_calls_per_min = max_calls_per_min
-        self.total_calls: int = 0
-        self._timestamps: deque[float] = deque()
-
-    def record_call(self) -> None:
-        now = time.monotonic()
-        while self._timestamps and (now - self._timestamps[0]) > 60.0:
-            self._timestamps.popleft()
-        if len(self._timestamps) >= self.max_calls_per_min:
-            raise RateLimitExceededError(
-                f"API rate cap reached ({self.max_calls_per_min} calls/min)"
+        if judge_reserved_per_min is None:
+            self.judge_reserved_per_min = (
+                config.JUDGE_RESERVED_CALLS_PER_MIN
+                if max_calls_per_min > config.JUDGE_RESERVED_CALLS_PER_MIN
+                else 0
             )
-        self._timestamps.append(now)
+        else:
+            self.judge_reserved_per_min = max(0, min(judge_reserved_per_min, max_calls_per_min))
+        self.total_calls: int = 0
+        self._bg_timestamps: deque[float] = deque()
+        self._judge_timestamps: deque[float] = deque()
+
+    @property
+    def background_limit_per_min(self) -> int:
+        return max(0, self.max_calls_per_min - self.judge_reserved_per_min)
+
+    def _prune(self, now: float) -> None:
+        while self._bg_timestamps and (now - self._bg_timestamps[0]) > 60.0:
+            self._bg_timestamps.popleft()
+        while self._judge_timestamps and (now - self._judge_timestamps[0]) > 60.0:
+            self._judge_timestamps.popleft()
+
+    def record_call(self, priority: str = "background") -> None:
+        now = time.monotonic()
+        self._prune(now)
+        total_recent = len(self._bg_timestamps) + len(self._judge_timestamps)
+
+        if priority == "judge":
+            if total_recent >= self.max_calls_per_min:
+                raise RateLimitExceededError(
+                    f"Judge API rate cap reached ({self.max_calls_per_min} calls/min)"
+                )
+            self._judge_timestamps.append(now)
+        else:
+            if len(self._bg_timestamps) >= self.background_limit_per_min or total_recent >= self.max_calls_per_min:
+                raise RateLimitExceededError(
+                    f"Background API pool full ({len(self._bg_timestamps)}/{self.background_limit_per_min} calls/min; "
+                    f"{self.judge_reserved_per_min} reserved for judge actions)"
+                )
+            self._bg_timestamps.append(now)
+
         self.total_calls += 1
+
+    def retry_after_sec(self, priority: str = "judge") -> int:
+        now = time.monotonic()
+        self._prune(now)
+        candidates: list[float] = []
+        if priority == "judge":
+            if self._bg_timestamps:
+                candidates.append(self._bg_timestamps[0])
+            if self._judge_timestamps:
+                candidates.append(self._judge_timestamps[0])
+        else:
+            if self._bg_timestamps:
+                candidates.append(self._bg_timestamps[0])
+        if not candidates:
+            return 2
+        oldest = min(candidates)
+        wait_s = max(1, int(round(60.0 - (now - oldest) + 0.5)))
+        return min(wait_s, 60)
 
     def calls_in_last_minute(self) -> int:
         now = time.monotonic()
-        while self._timestamps and (now - self._timestamps[0]) > 60.0:
-            self._timestamps.popleft()
-        return len(self._timestamps)
+        self._prune(now)
+        return len(self._bg_timestamps) + len(self._judge_timestamps)
 
 
 class GeminiBackend:
@@ -187,6 +237,7 @@ class GeminiBackend:
         self,
         api_key: str | None = None,
         max_calls_per_min: int = config.MAX_CALLS_PER_MIN,
+        judge_reserved_per_min: int | None = None,
     ) -> None:
         from google import genai
 
@@ -199,7 +250,10 @@ class GeminiBackend:
             api_key=resolved_key,
             http_options={"api_version": "v1beta"},
         )
-        self.counter = CallBudgetCounter(max_calls_per_min=max_calls_per_min)
+        self.counter = CallBudgetCounter(
+            max_calls_per_min=max_calls_per_min,
+            judge_reserved_per_min=judge_reserved_per_min,
+        )
 
     @property
     def call_count(self) -> int:
@@ -210,9 +264,10 @@ class GeminiBackend:
         image_png: bytes,
         text: str,
         questions: dict[str, dict[str, Any]],
+        priority: str = "background",
     ) -> dict[str, DecisionAnswer]:
         """Call Gemini Decision 1 (`v1beta`) on rendered PNG + compact text."""
-        self.counter.record_call()
+        self.counter.record_call(priority=priority)
         resp = await self._beta_client.aio.decisions.create(
             model=config.MODEL_IDS["decisions"],
             input=[
@@ -254,10 +309,11 @@ class GeminiBackend:
         schema: type[BaseModel] | dict[str, Any] | None = None,
         thinking_level: str | None = None,
         system_instruction: str | None = None,
+        priority: str = "background",
     ) -> Any:
         """Call Gemini 4 Carbon / Neon / Hydrogen via the Interactions API."""
         _validate_model_and_thinking(model, thinking_level)
-        self.counter.record_call()
+        self.counter.record_call(priority=priority)
 
         kwargs: dict[str, Any] = {
             "model": model,
@@ -299,10 +355,14 @@ class FakeGemini:
     def __init__(
         self,
         max_calls_per_min: int = config.MAX_CALLS_PER_MIN,
+        judge_reserved_per_min: int | None = None,
         decision_fn: Callable[[bytes, str, dict[str, Any]], dict[str, DecisionAnswer]] | None = None,
         reason_fn: Callable[[str, Any, Any, str | None, str | None], Any] | None = None,
     ) -> None:
-        self.counter = CallBudgetCounter(max_calls_per_min=max_calls_per_min)
+        self.counter = CallBudgetCounter(
+            max_calls_per_min=max_calls_per_min,
+            judge_reserved_per_min=judge_reserved_per_min,
+        )
         self._decision_fn = decision_fn
         self._reason_fn = reason_fn
         self._decision_queue: deque[dict[str, DecisionAnswer]] = deque()
@@ -325,9 +385,10 @@ class FakeGemini:
         image_png: bytes,
         text: str,
         questions: dict[str, dict[str, Any]],
+        priority: str = "background",
     ) -> dict[str, DecisionAnswer]:
         assert image_png.startswith(b"\x89PNG\r\n\x1a\n"), "decide() expects valid PNG bytes"
-        self.counter.record_call()
+        self.counter.record_call(priority=priority)
         self.decision_calls.append({"image_len": len(image_png), "text": text, "questions": questions})
 
         if self._decision_queue:
@@ -343,9 +404,10 @@ class FakeGemini:
         schema: type[BaseModel] | dict[str, Any] | None = None,
         thinking_level: str | None = None,
         system_instruction: str | None = None,
+        priority: str = "background",
     ) -> Any:
         _validate_model_and_thinking(model, thinking_level)
-        self.counter.record_call()
+        self.counter.record_call(priority=priority)
         self.reason_calls.append(
             {
                 "model": model,

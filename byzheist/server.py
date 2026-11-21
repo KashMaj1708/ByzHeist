@@ -7,11 +7,13 @@ from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
+import logging
 import os
 from pathlib import Path
 import secrets
+import struct
 import time
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
@@ -20,7 +22,7 @@ import uvicorn
 
 from byzheist import config, referee, telemetry
 from byzheist.agents.blue import BlueWatchdog
-from byzheist.agents.gemini import FakeGemini, GeminiBackend, has_api_key
+from byzheist.agents.gemini import FakeGemini, GeminiBackend, RateLimitExceededError, has_api_key
 from byzheist.agents.red import RedAttacker
 from byzheist.agents.tts import ArenaCommentator
 from byzheist.pbft.cluster import Cluster
@@ -32,6 +34,27 @@ WEB_DIR: Path = Path(__file__).resolve().parent / "web"
 AUTH_COOKIE_NAME = "byzheist_auth"
 SID_COOKIE_NAME = "byzheist_sid"
 RED_SEAT_TTL_SEC = 60.0
+SHORT_AUDIO_MESSAGE = "Didn't catch that, hold the button while you speak"
+
+
+def _is_audio_too_short(audio_bytes: bytes, duration_ms_header: str | None = None) -> bool:
+    """Return True if audio is < 2 KB or < 0.5 s."""
+    if len(audio_bytes) < 2048:
+        return True
+    if duration_ms_header:
+        try:
+            if float(duration_ms_header) < 500.0:
+                return True
+        except ValueError:
+            pass
+    # Inspect standard 44-byte RIFF/WAVE header byte rate if WAV
+    if len(audio_bytes) >= 44 and audio_bytes[:4] == b"RIFF" and audio_bytes[8:12] == b"WAVE":
+        byte_rate = struct.unpack_from("<I", audio_bytes, 28)[0]
+        if byte_rate > 0:
+            dur_s = max(0, len(audio_bytes) - 44) / float(byte_rate)
+            if dur_s < 0.5:
+                return True
+    return False
 
 
 def _expected_auth_token(access_code: str) -> str:
@@ -117,6 +140,8 @@ class ArenaState:
         blue_interval_sec: float = config.BLUE_INTERVAL_SEC,
         red_adapt_interval_sec: float = config.RED_ADAPT_INTERVAL_SEC,
         access_code: str | None = None,
+        gemini_override: GeminiBackend | FakeGemini | None = None,
+        judge_retry_delay_sec: float = 1.5,
     ) -> None:
         if use_fake_gemini is None:
             use_fake_gemini = not has_api_key()
@@ -124,6 +149,7 @@ class ArenaState:
         self.load_rate_hz = load_rate_hz
         self.blue_interval_sec = blue_interval_sec
         self.red_adapt_interval_sec = red_adapt_interval_sec
+        self.judge_retry_delay_sec = judge_retry_delay_sec
         self.access_code = (
             os.environ.get("ARENA_ACCESS_CODE", "").strip()
             if access_code is None
@@ -131,7 +157,9 @@ class ArenaState:
         )
 
         self.gemini: GeminiBackend | FakeGemini = (
-            FakeGemini() if self.use_fake_gemini else GeminiBackend()
+            gemini_override
+            if gemini_override is not None
+            else (FakeGemini() if self.use_fake_gemini else GeminiBackend())
         )
         self.commentator = ArenaCommentator(
             counter=self.gemini.counter,
@@ -501,6 +529,8 @@ def create_app(
     blue_interval_sec: float = config.BLUE_INTERVAL_SEC,
     red_adapt_interval_sec: float = config.RED_ADAPT_INTERVAL_SEC,
     access_code: str | None = None,
+    gemini_override: GeminiBackend | FakeGemini | None = None,
+    judge_retry_delay_sec: float = 1.5,
 ) -> FastAPI:
     arena = ArenaState(
         use_fake_gemini=use_fake_gemini,
@@ -508,6 +538,8 @@ def create_app(
         blue_interval_sec=blue_interval_sec,
         red_adapt_interval_sec=red_adapt_interval_sec,
         access_code=access_code,
+        gemini_override=gemini_override,
+        judge_retry_delay_sec=judge_retry_delay_sec,
     )
 
     @asynccontextmanager
@@ -672,59 +704,105 @@ def create_app(
         }
         return JSONResponse({"ok": True, "campaign": arena.campaign_state})
 
+    async def _run_judge_plan_safely(
+        plan_call: Callable[[], Awaitable[dict[str, Any]]],
+        commentary_prefix: str,
+    ) -> JSONResponse:
+        """Run a judge Red plan with 1x 1.5s retry on transient errors; never return HTTP 500."""
+        for attempt in range(2):
+            try:
+                res = await plan_call()
+                if res.get("applied") and res.get("plan"):
+                    p = res["plan"]
+                    await arena.commentator.announce(
+                        "red_plan_applied",
+                        f"{commentary_prefix} deployed {p['mode']} on replica {p['node']}.",
+                    )
+                return JSONResponse(res)
+            except RateLimitExceededError:
+                retry_s = arena.gemini.counter.retry_after_sec("judge")
+                msg = f"Red is catching its breath, try again in {retry_s}s"
+                return JSONResponse(
+                    {"ok": False, "error": msg, "detail": msg, "retry_after_s": retry_s},
+                    status_code=429,
+                )
+            except Exception as exc:
+                if attempt == 0:
+                    await asyncio.sleep(arena.judge_retry_delay_sec)
+                    continue
+                logging.getLogger(__name__).warning("Judge Red plan failed after retry: %s", exc)
+                err_txt = str(exc).lower()
+                code_attr = getattr(exc, "status_code", getattr(exc, "code", None))
+                is_429 = code_attr == 429 or "429" in err_txt or "rate" in err_txt or "quota" in err_txt
+                status_code = 429 if is_429 else 503
+                retry_s = 6 if is_429 else 4
+                msg = f"Red is catching its breath, try again in {retry_s}s"
+                return JSONResponse(
+                    {
+                        "ok": False,
+                        "error": msg,
+                        "detail": msg,
+                        "retry_after_s": retry_s,
+                    },
+                    status_code=status_code,
+                )
+        return JSONResponse(
+            {"ok": False, "error": "Red is catching its breath, try again in 4s", "retry_after_s": 4},
+            status_code=503,
+        )
+
     @app.post("/red/voice")
     async def red_voice(request: Request) -> JSONResponse:
         _require_auth(request)
-        _require_red_seat(request)
         assert arena.red is not None
         content_type = request.headers.get("content-type", "audio/webm").split(";")[0].strip()
+        dur_hdr = request.headers.get("x-audio-duration-ms")
         audio_bytes = await request.body()
-        if not audio_bytes:
-            raise HTTPException(status_code=400, detail="Empty audio payload")
-        res = await arena.red.plan(
-            audio_bytes,
-            audio_mime_type=content_type or "audio/webm",
-            apply=True,
-        )
-        if res.get("applied") and res.get("plan"):
-            p = res["plan"]
-            await arena.commentator.announce(
-                "red_plan_applied",
-                f"Red voice attack deployed {p['mode']} on replica {p['node']}.",
+        if _is_audio_too_short(audio_bytes, dur_hdr):
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": SHORT_AUDIO_MESSAGE,
+                    "detail": SHORT_AUDIO_MESSAGE,
+                },
+                status_code=400,
             )
-        return JSONResponse(res)
+        _require_red_seat(request)
+        return await _run_judge_plan_safely(
+            lambda: arena.red.plan(  # type: ignore[union-attr]
+                audio_bytes,
+                audio_mime_type=content_type or "audio/webm",
+                apply=True,
+            ),
+            commentary_prefix="Red voice plan",
+        )
 
     @app.post("/red/text")
     async def red_text(request: Request) -> JSONResponse:
         _require_auth(request)
-        _require_red_seat(request)
         assert arena.red is not None
-        body = await request.json()
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
         text = str(body.get("text", "")).strip()
         if not text:
             raise HTTPException(status_code=400, detail="Missing `text` field")
-        res = await arena.red.plan(text, apply=True)
-        if res.get("applied") and res.get("plan"):
-            p = res["plan"]
-            await arena.commentator.announce(
-                "red_plan_applied",
-                f"Red attacker deployed {p['mode']} on replica {p['node']}.",
-            )
-        return JSONResponse(res)
+        _require_red_seat(request)
+        return await _run_judge_plan_safely(
+            lambda: arena.red.plan(text, apply=True),  # type: ignore[union-attr]
+            commentary_prefix="Red plan",
+        )
 
     @app.post("/red/surprise")
     async def red_surprise(request: Request) -> JSONResponse:
         _require_auth(request)
-        _require_red_seat(request)
         assert arena.red is not None
-        res = await arena.red.plan("surprise", apply=True)
-        if res.get("applied") and res.get("plan"):
-            p = res["plan"]
-            await arena.commentator.announce(
-                "red_plan_applied",
-                f"Red surprise plan deployed {p['mode']} on replica {p['node']}.",
-            )
-        return JSONResponse(res)
+        _require_red_seat(request)
+        return await _run_judge_plan_safely(
+            lambda: arena.red.plan("surprise", apply=True),  # type: ignore[union-attr]
+            commentary_prefix="Red surprise plan",
+        )
 
     @app.post("/red/manual")
     async def red_manual(request: Request) -> JSONResponse:
@@ -783,6 +861,7 @@ def create_app(
         node = approved["node"]
         atk = approved.get("attack_type", "unknown")
         seq = approved.get("seq", 0)
+        await arena.blue.explain_human_approval(approved)
         await arena.commentator.announce(
             "quarantine_approved",
             f"Quarantine approved! Replica {node} isolated for {atk}.",
