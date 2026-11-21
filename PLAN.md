@@ -2,7 +2,7 @@
 
 **One line:** Can an AI rob a Byzantine-fault-tolerant bank? A Red agent (or a judge, by voice) controls one replica of a PBFT bank and tries to steal money or degrade it without getting caught. A Blue watchdog agent watches visual telemetry, convicts the malicious replica with evidence, and quarantines and replaces it. A referee checks that money is conserved and honest replicas agree.
 
-**Hackathon:** Gemini 4 NYC (Cerebral Valley x Google DeepMind), Sat Nov 21 2026. Submissions due **5:00 PM**. Everything in this repo is built today, from scratch.
+**Hackathon:** Gemini 4 NYC (Cerebral Valley x Google DeepMind), Sat Nov 21 2026. Submissions due 5:00 PM. **Build hard stop: 4:30 PM** (4:30 to 5:00 is reserved for the demo video and submission). Everything in this repo is built today, from scratch.
 
 **Problem statement:** "5 Sigma" (reliable agent + evaluation on unseen inputs vs a baseline). Hard rules we must satisfy:
 - At least two Gemini 4 models, each with a clear job, plus the Decisions API.
@@ -77,7 +77,7 @@ reports/               # PHASE_N.md
 
 ---
 
-## Phase 1: PBFT that works (target: 2:10 PM)
+## Phase 1: PBFT that works (target: 2:05 PM)
 
 **Build**
 - `crypto.py`, `messages.py` (canonical JSON with sorted keys for digests/signatures).
@@ -98,7 +98,7 @@ reports/               # PHASE_N.md
 
 ---
 
-## Phase 2: Byzantine behaviours, evidence, quarantine, replace (target: 2:45 PM)
+## Phase 2: Byzantine behaviours, evidence, quarantine, replace (target: 2:35 PM)
 
 **Build `faults.py`** (per-replica `FaultConfig` with `mode` + `params`; applied to the replica's outbound path or its reported telemetry):
 
@@ -137,7 +137,7 @@ Evidence must be verifiable by anyone (a `verify(evidence) -> bool` function). S
 
 ---
 
-## Phase 3: Telemetry Blue can see + images (target: 3:05 PM)
+## Phase 3: Telemetry Blue can see + images (target: 2:50 PM)
 
 **Build `telemetry.py`**
 - `snapshot(cluster) -> dict`: per replica `{view, last_exec_seq, commits_per_sec (10 s window), reported_observations, evidence_count}`, cluster `{throughput timeline (last 60 s), view-change times, recent events}`, plus the **verified evidence list**. Must NOT include fault configs or the referee's honest set.
@@ -152,7 +152,7 @@ Evidence must be verifiable by anyone (a `verify(evidence) -> bool` function). S
 
 ---
 
-## Phase 4: Agents (target: 3:45 PM)
+## Phase 4: Agents (target: 3:25 PM)
 
 Confirm exact SDK call shapes with the official Gemini API skill / docs server before writing them (`npx skills add google-gemini/gemini-skills --skill gemini-api-dev`, docs MCP `https://gemini-api-docs-mcp.dev`). Builder-guide constraints: no temperature/top_p/top_k/thinking_budget on Gemini 4 models; no `minimal` thinking level on Neon/Hydrogen; use native structured output or Decisions questions, never "please reply in JSON" prompts.
 
@@ -171,7 +171,7 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 6. Emit every verdict (with confidences) to the UI event stream.
 
 **`agents/red.py`** (attacker):
-- `plan(audio_bytes | text | "surprise")` → **Gemini 4 Carbon** with the audio as a multimodal input (judge speaks the attack) and a system prompt listing the fault modes, the budget, and the goal (steal money or degrade service without being caught; framing an honest replica is a valid strategy). Structured output `AttackPlan {node, mode, params, narrative}`. Executor validates through `budget.py` then calls `set_fault`.
+- `plan(audio_bytes | text | "surprise")` → **Gemini 4 Carbon** with the audio as a multimodal input (judge speaks the attack) and a system prompt listing the fault modes, the budget, and the goal (steal money or degrade service without being caught; framing an honest replica is a valid strategy). Structured output `AttackPlan {heard, node, mode, params, narrative}` (`heard` = what the judge asked for, in Carbon's words). Executor validates through `budget.py` then calls `set_fault`.
 - Adaptive loop every 10 s: **Gemini 4 Hydrogen** sees Red's own status (has Blue flagged me? throughput impact?) and the PNG, returns `{keep | tweak params | switch mode}`.
 - Manual path (no LLM) for UI buttons: `set_fault(node, mode)` through the same budget check.
 
@@ -179,11 +179,11 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 
 ---
 
-## Phase 5: UI the judges control (target: 4:15 PM)
+## Phase 5: UI the judges control (target: 3:55 PM)
 
 `server.py` (FastAPI + uvicorn) and `web/index.html` (vanilla JS + SVG, no build step):
 - **Center:** 4 replicas in a ring, animated dots for messages from the event log (colour by type), node colour: honest / Byzantine-revealed-after-round / suspected / quarantined / replacing. Big counter "Bank total: 10,000" that turns red if it ever changes, plus "Honest replicas agree: yes/no".
-- **Left (judge = Red):** hold-to-talk mic button (MediaRecorder → `POST /red/voice`), text box fallback, "Surprise me" button, manual mode buttons per node, "Calibration round (Red gets 2 nodes)" toggle. Red's narrative shown after planning.
+- **Left (judge = Red):** hold-to-talk mic button using the laptop's default microphone (`getUserMedia` + MediaRecorder, webm/opus → `POST /red/voice`; works because the page is served on `localhost`, a secure context). Show a live input-level meter while recording and, after planning, display **what Red heard** (Carbon returns a `heard` field with its transcription of the judge's request) so a misheard command is visible, text box fallback, "Surprise me" button, manual mode buttons per node, "Calibration round (Red gets 2 nodes)" toggle. Red's narrative shown after planning.
 - **Right (Blue):** live Decision 1 answers with confidence bars, current telemetry PNG thumbnail (the exact image Blue saw), verified evidence list, pending quarantine card with **Approve / Deny**, Neon explanation, quarantine/replace timeline.
 - **Bottom strip:** anti-cheat log, throughput sparkline, "Reset round" button.
 - Websocket pushes state ~4x per second. Endpoints: `GET /`, `WS /ws`, `POST /red/voice|text|surprise|manual`, `POST /blue/approve|deny`, `POST /round/reset`, `GET /telemetry.png`.
@@ -193,23 +193,23 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 
 ---
 
-## Phase 6: Evaluation + proof it works (target: 4:40 PM)
+## Phase 6: Evaluation + proof it works (target: 4:15 PM)
 
 `eval/run_eval.py --live` (and `--fake` for a dry run):
-- **Held-out scenarios:** 20 rounds generated from a seed **not used during development** (`EVAL_SEED=2026`): random mode x target role (primary/backup) x params, plus 4 plans produced live by Red's "surprise me". Each round: honest warm-up 5 s, attack starts, cap 30 s.
+- **Held-out scenarios:** 12 rounds generated from a seed **not used during development** (`EVAL_SEED=2026`): random mode x target role (primary/backup) x params, plus 4 plans produced live by Red's "surprise me". Each round: honest warm-up 5 s, attack starts, cap 30 s.
 - **Systems compared:**
   - **Baseline A, PBFT alone:** no watchdog. Measures how long the Byzantine replica stays in the cluster (expected: forever for backups) and throughput lost under `slow`.
   - **Baseline B, single model call:** one Neon call per tick on the raw text logs only (no image, no Decisions API, no evidence verification), allowed to quarantine directly.
   - **ByzHeist Blue** (full system).
 - **Metrics per system:** detection rate, correct-culprit rate, median time to quarantine, **false quarantines (honest node removed)**, rounds where referee broke, throughput lost.
 - Write `eval/results.json` and `EVAL.md`: results table, the 3 worst failures with what happened, and what was changed after seeing them (if anything).
-- Respect the call cap. If time is short, cut to 10 rounds and say so.
+- Respect the call cap. If time is short, cut to 8 rounds and say so.
 
 **Tests**: `--fake` run completes and writes both files.
 
 ---
 
-## Phase 7: Ship (target: 4:55 PM)
+## Phase 7: Ship (target: 4:30 PM, hard stop)
 
 - README: one-liner, how to run, architecture sketch, model roles table (Carbon = Red planner from voice, Hydrogen = Red adaptation, Decision 1 = Blue triage on telemetry images, Neon = Blue escalation + explanations), eval table from `EVAL.md`, known limits, **"What was built at the hackathon"**.
 - Confirm no secrets in git history (`git log -p | grep -i "api_key\|AIza"` must be empty).
@@ -217,7 +217,7 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 
 ---
 
-## Stretch (only if all phases are green before 4:30 PM)
+## Stretch (only if Phase 5 is green before 3:45 PM; otherwise skip entirely)
 1. Run Red and Blue as **Antigravity Managed Agents** in a self-hosted environment (`gemini-api environments connect`) inside a container, with the arena's HTTP API as their only tool (targets the $5,000 Managed Agents prize).
 2. Gemini 3.8 Live for streaming voice instead of push-to-talk.
 3. Post-round video report: record the UI, Neon agentic video understanding finds the exact attack start timestamp.

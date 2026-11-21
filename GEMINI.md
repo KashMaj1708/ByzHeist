@@ -1,6 +1,6 @@
 # Instructions for the coding agent
 
-You are building **ByzHeist** for a hackathon that ends at **5:00 PM today (Nov 21, 2026)**. The full plan is in `PLAN.md`. Follow it phase by phase.
+You are building **ByzHeist** for a hackathon. **Build hard stop is 4:30 PM today (Nov 21, 2026)**; 4:30 to 5:00 is reserved for the demo video. Phase target times in `PLAN.md` were tightened at 1:40 PM: re-read them. The full plan is in `PLAN.md`. Follow it phase by phase.
 
 ## Loop for every phase
 1. Read the phase in `PLAN.md`.
