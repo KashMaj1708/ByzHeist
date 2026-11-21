@@ -3,327 +3,630 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ByzHeist — Adversarial PBFT Bank Arena</title>
+  <title>ByzHeist Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0b1120;
-      --panel: #131c31;
-      --panel-alt: #1b2742;
-      --border: #2a3958;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --green: #10b981;
-      --red: #ef4444;
-      --amber: #f59e0b;
-      --cyan: #38bdf8;
-      --purple: #a855f7;
+      --bg: #FAF8F5;
+      --panel: #F3EEE8;
+      --border: #E4DDD5;
+      --text: #2B2724;
+      --muted: #8A817A;
+      --accent: #B9A090;
+      --accent-hover: #A98E7D;
+      --sage: #8FA58C;
+      --ochre: #C9A24D;
+      --terracotta: #B5563F;
+      --slate: #7C8A99;
+      --plum: #7D5A73;
+      --serif: "Cormorant Garamond", Georgia, serif;
+      --sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: var(--sans);
+      font-weight: 300;
       font-size: 13px;
-      line-height: 1.4;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
     }
-    /* Strip ?code=... from URL bar after tunnel login so demo recordings never flash the code */
+
+    /* Top bar: BYZHEIST letter-spaced left, round number right */
     header {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 10px 18px;
-      background: #0f172a;
+      gap: 16px;
+      padding: 18px 32px;
+      background: var(--bg);
       border-bottom: 1px solid var(--border);
     }
-    .brand { display: flex; align-items: baseline; gap: 10px; }
-    .brand h1 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
-    .brand span { color: var(--muted); font-size: 12px; }
-    .invariants { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .inv-pill {
-      padding: 6px 14px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 15px;
-      border: 1px solid rgba(16, 185, 129, 0.45);
-      background: rgba(16, 185, 129, 0.14);
-      color: #34d399;
-    }
-    .inv-pill.broken {
-      background: rgba(239, 68, 68, 0.25);
-      border-color: #ef4444;
-      color: #fca5a5;
-      animation: pulseRed 0.9s infinite alternate;
-    }
-    @keyframes pulseRed {
-      from { transform: scale(1); }
-      to { transform: scale(1.03); }
-    }
-    .meta-pill {
-      padding: 5px 10px;
-      border-radius: 6px;
-      background: var(--panel-alt);
-      color: var(--muted);
+
+    .brand-title {
+      margin: 0;
+      font-family: var(--sans);
       font-size: 12px;
-      border: 1px solid var(--border);
+      font-weight: 400;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--text);
     }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .meta-pill {
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .commentary-label {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .commentary-label input,
+    .calibration-label input {
+      accent-color: var(--accent);
+      margin: 0;
+    }
+
+    #roundLabel {
+      font-family: var(--serif);
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: var(--text);
+    }
+
+    /* Full-width thin state strip with serif text, smooth fade in/out, no flashing */
+    #arenaEventBanner {
+      width: 100%;
+      margin: 0;
+      padding: 0 32px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      background: var(--terracotta);
+      color: #FAF8F5;
+      font-family: var(--serif);
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      text-align: center;
+      border-bottom: 0 solid var(--border);
+      transition: opacity 0.45s ease, background-color 0.45s ease, max-height 0.35s ease, padding 0.35s ease;
+    }
+
+    #arenaEventBanner.banner-quarantine {
+      max-height: 54px;
+      padding: 10px 32px;
+      opacity: 1;
+      background: var(--terracotta);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #arenaEventBanner.banner-replace {
+      max-height: 54px;
+      padding: 10px 32px;
+      opacity: 1;
+      background: var(--sage);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Main 3-column layout with 32px gutters */
     main {
       display: grid;
-      grid-template-columns: 340px minmax(360px, 1fr) 370px;
-      gap: 12px;
-      padding: 12px 16px 8px;
-      min-height: calc(100vh - 175px);
+      grid-template-columns: 330px minmax(360px, 1fr) 350px;
+      gap: 32px;
+      padding: 32px 32px 24px;
+      max-width: 1520px;
+      margin: 0 auto;
+      align-items: start;
     }
-    @media (max-width: 1180px) {
-      main { grid-template-columns: 1fr; }
-    }
+
     .col {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 18px;
     }
-    h2 {
+
+    .center-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 28px 28px 22px;
+      box-shadow: 0 1px 2px rgba(43, 39, 36, 0.03);
+      align-items: center;
+    }
+
+    .section-head {
       margin: 0;
-      font-size: 13px;
+      font-family: var(--sans);
+      font-size: 10.5px;
+      font-weight: 400;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.12em;
       color: var(--muted);
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: baseline;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
     }
+
     .card {
-      background: var(--panel-alt);
+      background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 2px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 2px rgba(43, 39, 36, 0.03);
     }
+
+    .sub-label {
+      font-size: 10px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    /* Hero & Bank Total above the ring */
+    .hero-block {
+      width: 100%;
+      text-align: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-line {
+      margin: 0 0 8px;
+      font-family: var(--serif);
+      font-size: 30px;
+      font-weight: 300;
+      line-height: 1.2;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+
+    .invariants {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #bankTotalPill {
+      font-family: var(--serif);
+      font-size: 34px;
+      font-weight: 400;
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+
+    #bankTotalPill.broken {
+      color: var(--terracotta);
+    }
+
+    #agreementPill {
+      font-size: 10.5px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    #agreementPill.broken {
+      color: var(--terracotta);
+    }
+
+    /* Flat rectangular buttons, accent fill, small caps text */
     button {
       cursor: pointer;
-      border: 1px solid var(--border);
-      background: #243252;
+      border: 1px solid var(--accent);
+      background: var(--accent);
       color: var(--text);
-      border-radius: 6px;
-      padding: 7px 11px;
+      border-radius: 2px;
+      padding: 8px 14px;
+      font-family: var(--sans);
       font-size: 12px;
-      font-weight: 600;
-      transition: background 0.12s;
+      font-weight: 400;
+      font-variant: small-caps;
+      letter-spacing: 0.08em;
+      transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
     }
-    button:hover:not(:disabled) { background: #31446e; }
-    button:disabled { opacity: 0.45; cursor: not-allowed; }
-    .btn-red { background: #dc2626; border-color: #ef4444; color: #fff; }
-    .btn-red:hover:not(:disabled) { background: #b91c1c; }
-    .btn-amber { background: #d97706; border-color: #f59e0b; color: #fff; }
-    .btn-green { background: #059669; border-color: #10b981; color: #fff; }
+
+    button:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: #EAE3DA;
+      border-color: var(--accent);
+    }
+
     .mic-btn {
       width: 100%;
-      padding: 12px;
-      font-size: 14px;
-      background: #991b1b;
-      border: 1px solid #ef4444;
-      color: #fff;
+      padding: 12px 16px;
+      font-size: 13px;
       user-select: none;
       touch-action: none;
     }
+
     .mic-btn.recording {
-      background: #ef4444;
-      box-shadow: 0 0 18px rgba(239, 68, 68, 0.7);
+      background: var(--terracotta);
+      border-color: var(--terracotta);
+      color: #FAF8F5;
     }
+
     .meter-track {
-      margin-top: 7px;
-      height: 8px;
+      margin-top: 8px;
+      height: 4px;
       width: 100%;
-      background: #0b1120;
-      border-radius: 4px;
+      background: var(--bg);
+      border-radius: 2px;
       overflow: hidden;
       border: 1px solid var(--border);
     }
+
     .meter-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);
+      background: var(--accent);
       transition: width 0.05s linear;
     }
-    .text-row { display: flex; gap: 6px; margin-top: 6px; }
+
+    .text-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
     .text-row input {
       flex: 1;
-      padding: 7px 9px;
-      border-radius: 6px;
+      padding: 8px 10px;
+      border-radius: 2px;
       border: 1px solid var(--border);
-      background: #0b1120;
+      background: var(--bg);
       color: var(--text);
-      font-size: 12px;
+      font-family: var(--sans);
+      font-weight: 300;
+      font-size: 12.5px;
+      outline: none;
     }
+
+    .text-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .text-row input::placeholder {
+      color: var(--muted);
+    }
+
     .heard-box {
-      font-size: 12px;
-      border-left: 3px solid var(--cyan);
-      padding-left: 8px;
-      margin: 4px 0;
-      color: #e2e8f0;
+      font-family: var(--serif);
+      font-size: 16px;
+      font-style: italic;
+      border-left: 1px solid var(--accent);
+      padding-left: 10px;
+      margin: 4px 0 12px;
+      color: var(--text);
     }
+
     .narrative-box {
-      font-size: 12px;
-      color: #cbd5e1;
-      margin-top: 4px;
+      font-size: 12.5px;
+      color: var(--muted);
     }
+
     .seat-banner {
-      padding: 6px 9px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 2px;
+      font-size: 11.5px;
+      font-weight: 400;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--muted);
     }
-    .seat-free { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); }
-    .seat-yours { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35); }
-    .seat-taken { background: rgba(245, 158, 11, 0.18); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.45); }
+
+    .seat-free {
+      border-color: var(--border);
+      color: var(--muted);
+    }
+
+    .seat-yours {
+      border-color: var(--sage);
+      color: var(--text);
+    }
+
+    .seat-taken {
+      border-color: var(--ochre);
+      color: var(--text);
+    }
+
+    .evict-toast {
+      display: none;
+      padding: 8px 12px;
+      border-radius: 2px;
+      background: var(--panel);
+      border: 1px solid var(--terracotta);
+      color: var(--terracotta);
+      font-family: var(--serif);
+      font-size: 15px;
+      text-align: center;
+    }
+
+    .calibration-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
     .node-manual-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-      margin-top: 6px;
+      gap: 6px;
+      margin-top: 8px;
     }
+
     .mode-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
+      gap: 6px;
       margin-top: 6px;
     }
-    .mode-grid button, .node-manual-grid button { padding: 5px 4px; font-size: 11px; }
-    .node-sel.active { outline: 2px solid var(--cyan); background: #1e3a5f; }
-    .bar-row { margin-bottom: 6px; }
-    .bar-label { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 2px; }
-    .bar-bg { height: 7px; background: #0b1120; border-radius: 4px; overflow: hidden; }
-    .bar-fg { height: 100%; background: var(--cyan); transition: width 0.2s ease; }
+
+    .mode-grid button,
+    .node-manual-grid button {
+      padding: 6px 4px;
+      font-size: 11px;
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .mode-grid button:hover:not(:disabled),
+    .node-manual-grid button:hover:not(:disabled) {
+      background: #EAE3DA;
+      border-color: var(--accent);
+    }
+
+    .node-manual-grid button.node-sel.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    /* Decision 1 bars */
+    .bar-row {
+      margin-bottom: 9px;
+    }
+
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .bar-label span:last-child {
+      color: var(--muted);
+    }
+
+    .bar-bg {
+      height: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fg {
+      height: 100%;
+      background: var(--slate);
+      transition: width 0.25s ease;
+    }
+
+    /* Telemetry PNG thumbnail: dark frame preserved, hairline border, caption "What Blue sees" */
+    .telemetry-frame {
+      margin: 0;
+    }
+
     .telemetry-thumb {
       width: 100%;
-      border-radius: 6px;
+      border-radius: 2px;
       border: 1px solid var(--border);
       cursor: zoom-in;
       display: block;
     }
-    .pending-card {
-      border: 2px solid var(--amber);
-      background: rgba(245, 158, 11, 0.13);
+
+    .telemetry-caption {
+      margin-top: 7px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
     }
+
+    .pending-card {
+      border: 1px solid var(--ochre);
+      background: var(--bg);
+    }
+
+    .legend-block {
+      width: 100%;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
     .legend-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 9px;
+      gap: 12px;
       justify-content: center;
       font-size: 11px;
       color: var(--muted);
     }
+
     .dot-swatch {
       display: inline-block;
-      width: 9px;
-      height: 9px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      margin-right: 4px;
+      margin-right: 5px;
       vertical-align: middle;
     }
+
+    /* Bottom strip with 32px gutters */
     footer.bottom-strip {
       display: grid;
-      grid-template-columns: 1fr 320px 210px;
-      gap: 12px;
-      padding: 8px 16px 14px;
+      grid-template-columns: 1fr 340px 220px;
+      gap: 32px;
+      padding: 8px 32px 36px;
+      max-width: 1520px;
+      margin: 0 auto;
     }
-    @media (max-width: 1180px) {
-      footer.bottom-strip { grid-template-columns: 1fr; }
-    }
+
     .log-list {
-      max-height: 82px;
+      max-height: 84px;
       overflow-y: auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 11px;
-      color: #cbd5e1;
+      font-family: var(--sans);
+      font-size: 11.5px;
+      color: var(--muted);
     }
-    .log-item { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+    .log-item {
+      padding: 3px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .log-item:last-child {
+      border-bottom: none;
+    }
+
     #imgModal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(5, 10, 20, 0.88);
+      background: rgba(43, 39, 36, 0.72);
       z-index: 999;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 32px;
     }
-    #imgModal img { max-width: 95vw; max-height: 92vh; border-radius: 10px; border: 1px solid var(--border); }
-    #arenaEventBanner {
-      display: none;
-      margin: 10px 16px 0;
-      padding: 13px 20px;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 800;
-      text-align: center;
-      letter-spacing: 0.01em;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
-      transition: background 0.22s ease, border-color 0.22s ease;
+
+    #imgModal img {
+      max-width: 95vw;
+      max-height: 92vh;
+      border-radius: 2px;
+      border: 1px solid var(--border);
     }
-    #arenaEventBanner.banner-quarantine {
-      display: block;
-      background: linear-gradient(90deg, #7f1d1d, #dc2626, #7f1d1d);
-      border: 2px solid #fca5a5;
-      color: #ffffff;
+
+    @keyframes nodeFadeIn {
+      from { opacity: 0.35; }
+      to { opacity: 1; }
     }
-    #arenaEventBanner.banner-replace {
-      display: block;
-      background: linear-gradient(90deg, #064e3b, #059669, #064e3b);
-      border: 2px solid #6ee7b7;
-      color: #ffffff;
-    }
-    .evict-toast {
-      display: none;
-      padding: 8px 11px;
-      border-radius: 7px;
-      background: rgba(239, 68, 68, 0.22);
-      border: 1px solid #f87171;
-      color: #fecaca;
-      font-weight: 700;
-      font-size: 12.5px;
-      text-align: center;
-    }
-    @keyframes nodePulseRed {
-      0% { stroke-width: 3.5; r: 38; }
-      50% { stroke-width: 7.5; r: 42; }
-      100% { stroke-width: 3.5; r: 38; }
-    }
-    @keyframes nodeSpinReplace {
-      0% { transform: scale(0.55) rotate(-180deg); opacity: 0.35; }
-      65% { transform: scale(1.12) rotate(10deg); opacity: 1; }
-      100% { transform: scale(1) rotate(0deg); opacity: 1; }
-    }
-    .svg-node-quarantine circle {
-      animation: nodePulseRed 0.65s infinite ease-in-out;
-    }
+
     .svg-node-replace {
-      transform-box: fill-box;
-      transform-origin: center;
-      animation: nodeSpinReplace 0.85s ease-out;
+      animation: nodeFadeIn 0.55s ease;
+    }
+
+    @media (max-width: 1140px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      footer.bottom-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Mobile: under 700 px, stack everything; mic and Approve/Deny buttons at least 48 px tall */
+    @media (max-width: 700px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px 20px;
+        gap: 10px;
+      }
+      .top-right {
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      main {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 20px 20px 16px;
+      }
+      footer.bottom-strip {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 8px 20px 28px;
+      }
+      .text-row,
+      .pending-actions {
+        flex-direction: column;
+      }
+      #micBtn,
+      #approveBtn,
+      #denyBtn {
+        min-height: 48px;
+      }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <h1>ByzHeist Arena</h1>
-      <span id="roundLabel">Round #1</span>
+    <h1 class="brand-title">BYZHEIST</h1>
+    <div class="top-right">
       <span class="meta-pill" id="modeBadge">Connecting...</span>
       <span class="meta-pill" id="apiCallBadge">API: 0/30 rpm</span>
-      <label class="meta-pill" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
-        <input type="checkbox" id="commentaryToggle" style="margin:0;" />
-        <span>Commentary (TTS)</span>
+      <label class="commentary-label">
+        <input type="checkbox" id="commentaryToggle" />
+        <span>Commentary</span>
       </label>
-    </div>
-    <div class="invariants">
-      <div class="inv-pill" id="bankTotalPill">Bank total: 10,000</div>
-      <div class="inv-pill" id="agreementPill">Honest replicas agree: YES</div>
+      <span id="roundLabel">Round #1</span>
     </div>
   </header>
 
@@ -332,39 +635,39 @@
   <main>
     <!-- LEFT: JUDGE = RED CONTROLLER -->
     <section class="col">
-      <h2>
-        <span>Judge = Red Attacker</span>
-        <span style="color:#f87171;font-size:11px;">Carbon + Hydrogen</span>
+      <h2 class="section-head">
+        <span>Red Attacker</span>
+        <span>Carbon · Hydrogen</span>
       </h2>
 
       <div id="seatBanner" class="seat-banner seat-free">Red seat open — send an attack to claim (60s lock)</div>
       <div id="redEvictToast" class="evict-toast"></div>
 
       <div class="card">
-        <button id="micBtn" class="mic-btn">Hold to Speak Attack (Mic → Carbon)</button>
+        <button id="micBtn" class="mic-btn">Hold to Speak Attack</button>
         <div class="meter-track"><div id="micMeter" class="meter-fill"></div></div>
         <div class="text-row">
-          <input id="redTextInput" type="text" placeholder="Or type attack (e.g. 'frame S1 from S3' or 'make primary slow')" />
-          <button id="sendTextBtn" class="btn-red">Attack</button>
+          <input id="redTextInput" type="text" placeholder="Type an attack (e.g. make primary slow)" />
+          <button id="sendTextBtn">Attack</button>
         </div>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button id="surpriseBtn" class="btn-amber" style="flex:1;">Surprise Me (Carbon)</button>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button id="surpriseBtn" style="flex:1;">Surprise Me</button>
         </div>
       </div>
 
       <div class="card">
-        <div style="font-weight:700; font-size:11.5px; color:#7dd3fc;">What Red Heard (Carbon transcription):</div>
+        <div class="sub-label"><span>What Red Heard</span></div>
         <div id="redHeard" class="heard-box">Waiting for voice or text command...</div>
-        <div style="font-weight:700; font-size:11.5px; color:#fca5a5; margin-top:6px;">Red Plan &amp; Narrative:</div>
+        <div class="sub-label"><span>Plan &amp; Narrative</span></div>
         <div id="redNarrative" class="narrative-box">No active attack planned yet.</div>
       </div>
 
       <div class="card">
-        <label style="display:flex; align-items:center; gap:7px; font-weight:600; cursor:pointer;">
+        <label class="calibration-label">
           <input type="checkbox" id="calibrationToggle" />
-          <span>Calibration round (Red gets 2 nodes — breaks f=1!)</span>
+          <span>Calibration round (2 Byzantine nodes, breaks f=1)</span>
         </label>
-        <div style="margin-top:8px; font-size:11px; color:var(--muted);">Manual Fault Override (select node, then mode):</div>
+        <div class="sub-label" style="margin-top:12px;"><span>Manual Fault Override</span></div>
         <div class="node-manual-grid" id="manualNodeBtns">
           <button class="node-sel active" data-node="S0">S0</button>
           <button class="node-sel" data-node="S1">S1</button>
@@ -386,110 +689,114 @@
       </div>
 
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-weight:700; font-size:11.5px; color:#c084fc;">Antigravity Managed Agent Red</span>
-          <span id="campaignRoundBadge" class="meta-pill" style="padding:2px 7px; font-size:11px;">Idle (0/3)</span>
+        <div class="sub-label">
+          <span>Managed Agent Campaign</span>
+          <span id="campaignRoundBadge">Idle (0/3)</span>
         </div>
-        <div id="campaignPlaybook" class="log-list" style="max-height:95px; white-space:pre-wrap;">Run `scripts/red_campaign.py` to launch a 3-round Managed Agent heist campaign and build PLAYBOOK.md.</div>
+        <div id="campaignPlaybook" class="log-list" style="max-height:95px; white-space:pre-wrap;">Run scripts/red_campaign.py to launch a 3-round Managed Agent campaign and build PLAYBOOK.md.</div>
       </div>
     </section>
 
-    <!-- CENTER: 4-REPLICA PBFT RING + ANIMATED MESSAGE DOTS -->
-    <section class="col" style="align-items:center; justify-content:space-between;">
-      <h2 style="width:100%;">
-        <span>Live PBFT Consensus Ring (n=4, quorum=3)</span>
-        <span id="statusHint" style="font-size:11px; color:var(--cyan);">Streaming 4 Hz</span>
-      </h2>
+    <!-- CENTER: HERO + BANK TOTAL + 4-REPLICA PBFT RING -->
+    <section class="col center-panel">
+      <div class="hero-block">
+        <p class="hero-line">Can an AI rob a Byzantine bank?</p>
+        <div class="invariants">
+          <div id="bankTotalPill">Bank total: 10,000</div>
+          <div id="agreementPill">Honest replicas agree: YES</div>
+        </div>
+      </div>
 
-      <svg id="ringSvg" viewBox="0 0 500 410" style="width:100%; max-height:430px;">
-        <defs>
-          <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#1e293b" stop-opacity="0.55" />
-            <stop offset="100%" stop-color="#0b1120" stop-opacity="0" />
-          </radialGradient>
-        </defs>
-        <circle cx="250" cy="205" r="150" fill="url(#ringGlow)" stroke="#263554" stroke-width="1.5" stroke-dasharray="5,5" />
+      <div class="sub-label" style="width:100%; margin:0;">
+        <span>PBFT Consensus Ring (n=4, quorum=3)</span>
+        <span id="statusHint">Streaming 4 Hz</span>
+      </div>
+
+      <svg id="ringSvg" viewBox="0 0 500 420" style="width:100%; max-height:420px;">
+        <circle cx="250" cy="205" r="150" fill="none" stroke="#E4DDD5" stroke-width="1" />
         <g id="linksLayer"></g>
         <g id="dotsLayer"></g>
         <g id="nodesLayer"></g>
       </svg>
 
-      <div style="width:100%;">
+      <div class="legend-block">
         <div class="legend-row" style="margin-bottom:6px;">
-          <span><i class="dot-swatch" style="background:#10b981;"></i>Honest</span>
-          <span><i class="dot-swatch" style="background:#f59e0b;"></i>Suspected</span>
-          <span><i class="dot-swatch" style="background:#ef4444;"></i>Quarantined</span>
-          <span><i class="dot-swatch" style="background:#38bdf8;"></i>Replacing</span>
-          <span><i class="dot-swatch" style="background:#a855f7;"></i>Byzantine (revealed)</span>
+          <span><i class="dot-swatch" style="background:#8FA58C;"></i>Honest</span>
+          <span><i class="dot-swatch" style="background:#C9A24D;"></i>Suspected</span>
+          <span><i class="dot-swatch" style="background:#B5563F;"></i>Quarantined</span>
+          <span><i class="dot-swatch" style="background:#7C8A99;"></i>Replacing</span>
+          <span><i class="dot-swatch" style="background:#7D5A73;"></i>Byzantine (revealed)</span>
         </div>
         <div class="legend-row">
-          <span><i class="dot-swatch" style="background:#38bdf8;"></i>PRE-PREPARE</span>
-          <span><i class="dot-swatch" style="background:#60a5fa;"></i>PREPARE</span>
-          <span><i class="dot-swatch" style="background:#34d399;"></i>COMMIT</span>
-          <span><i class="dot-swatch" style="background:#facc15;"></i>VIEW-CHANGE</span>
-          <span><i class="dot-swatch" style="background:#c084fc;"></i>REQ/REPLY</span>
+          <span><i class="dot-swatch" style="background:#7C8A99;"></i>Pre-prepare</span>
+          <span><i class="dot-swatch" style="background:#8FA58C;"></i>Prepare</span>
+          <span><i class="dot-swatch" style="background:#6F886D;"></i>Commit</span>
+          <span><i class="dot-swatch" style="background:#C9A24D;"></i>View-change</span>
+          <span><i class="dot-swatch" style="background:#7D5A73;"></i>Req / Reply</span>
         </div>
       </div>
     </section>
 
     <!-- RIGHT: BLUE WATCHDOG -->
     <section class="col">
-      <h2>
+      <h2 class="section-head">
         <span>Blue Watchdog</span>
-        <span style="color:#38bdf8;font-size:11px;">Decision 1 + Neon</span>
+        <span>Decision 1 · Neon</span>
       </h2>
 
       <div id="pendingCard" class="card pending-card" style="display:none;">
-        <div style="font-weight:700; color:#fcd34d; margin-bottom:4px;">Pending Quarantine — Human Approval Required</div>
-        <div id="pendingText" style="font-size:12px; margin-bottom:8px;"></div>
-        <div id="pendingError" style="display:none; color:#fca5a5; font-size:11.5px; margin-bottom:8px; padding:6px; background:rgba(127,29,29,0.45); border-radius:5px;"></div>
-        <div style="display:flex; gap:8px;">
-          <button id="approveBtn" class="btn-green" style="flex:1;">Approve Quarantine &amp; Replace</button>
-          <button id="denyBtn" style="flex:1;">Deny</button>
+        <div class="sub-label" style="color:#2B2724;"><span>Pending Quarantine · Approval Required</span></div>
+        <div id="pendingText" style="font-size:12.5px; color:#2B2724; margin-bottom:10px;"></div>
+        <div id="pendingError" style="display:none; color:#B5563F; font-size:11.5px; margin-bottom:10px; padding:6px 8px; border:1px solid #B5563F; border-radius:2px;"></div>
+        <div class="pending-actions" style="display:flex; gap:8px;">
+          <button id="approveBtn" style="flex:1;">Approve Quarantine &amp; Replace</button>
+          <button id="denyBtn" class="btn-ghost" style="flex:1;">Deny</button>
         </div>
       </div>
 
       <div class="card">
-        <div style="font-weight:700; font-size:11.5px; margin-bottom:6px;">Gemini Decision 1 Triage (Calibrated):</div>
+        <div class="sub-label"><span>Decision 1 Triage</span></div>
         <div class="bar-row">
-          <div class="bar-label"><span>Under Attack (noul)</span><span id="dAttackVal">—</span></div>
-          <div class="bar-bg"><div id="dAttackBar" class="bar-fg" style="width:0%; background:#ef4444;"></div></div>
+          <div class="bar-label"><span>Under attack (noul)</span><span id="dAttackVal">—</span></div>
+          <div class="bar-bg"><div id="dAttackBar" class="bar-fg" style="width:0%; background:#B5563F;"></div></div>
         </div>
         <div class="bar-row">
           <div class="bar-label"><span id="dSuspectLbl">Suspect: —</span><span id="dSuspectVal">—</span></div>
-          <div class="bar-bg"><div id="dSuspectBar" class="bar-fg" style="width:0%; background:#f59e0b;"></div></div>
+          <div class="bar-bg"><div id="dSuspectBar" class="bar-fg" style="width:0%; background:#C9A24D;"></div></div>
         </div>
         <div class="bar-row">
           <div class="bar-label"><span id="dTypeLbl">Attack Type: —</span><span id="dTypeVal">—</span></div>
-          <div class="bar-bg"><div id="dTypeBar" class="bar-fg" style="width:0%; background:#38bdf8;"></div></div>
+          <div class="bar-bg"><div id="dTypeBar" class="bar-fg" style="width:0%; background:#7C8A99;"></div></div>
         </div>
         <div class="bar-row" style="margin-bottom:0;">
-          <div class="bar-label"><span>Severity Rubric (0..2)</span><span id="dSevVal">—</span></div>
-          <div class="bar-bg"><div id="dSevBar" class="bar-fg" style="width:0%; background:#a855f7;"></div></div>
+          <div class="bar-label"><span>Severity (0..2)</span><span id="dSevVal">—</span></div>
+          <div class="bar-bg"><div id="dSevBar" class="bar-fg" style="width:0%; background:#7D5A73;"></div></div>
         </div>
       </div>
 
       <div class="card">
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:11.5px; font-weight:700;">
-          <span>Rendered Telemetry Frame (Blue Input)</span>
-          <span style="color:var(--muted); font-weight:400;">click to enlarge</span>
-        </div>
-        <img id="telemetryImg" class="telemetry-thumb" src="/telemetry.png" alt="Blue Telemetry PNG" />
+        <figure class="telemetry-frame">
+          <img id="telemetryImg" class="telemetry-thumb" src="/telemetry.png" alt="What Blue sees" />
+          <figcaption class="telemetry-caption">
+            <span>What Blue sees</span>
+            <span>Click to enlarge</span>
+          </figcaption>
+        </figure>
       </div>
 
       <div class="card">
-        <div style="font-weight:700; font-size:11.5px; margin-bottom:4px;">Verified Cryptographic Evidence:</div>
-        <div id="evidenceList" class="log-list" style="max-height:54px;">None (0 signed proofs)</div>
+        <div class="sub-label"><span>Verified Cryptographic Evidence</span></div>
+        <div id="evidenceList" class="log-list" style="max-height:58px;">None (0 signed proofs)</div>
       </div>
 
       <div class="card">
-        <div style="font-weight:700; font-size:11.5px; color:#93c5fd; margin-bottom:4px;">Gemini 4 Neon Analysis / Explanation:</div>
-        <div id="neonExplanation" style="font-size:12px; color:#cbd5e1;">Monitoring visual telemetry...</div>
+        <div class="sub-label"><span>Neon Analysis</span></div>
+        <div id="neonExplanation" style="font-size:12.5px; color:#2B2724;">Monitoring visual telemetry...</div>
       </div>
 
       <div class="card">
-        <div style="font-weight:700; font-size:11.5px; margin-bottom:4px;">Quarantine &amp; Replace Timeline:</div>
-        <div id="blueTimeline" class="log-list" style="max-height:60px;">No actions yet.</div>
+        <div class="sub-label"><span>Quarantine &amp; Replace Timeline</span></div>
+        <div id="blueTimeline" class="log-list" style="max-height:64px;">No actions yet.</div>
       </div>
     </section>
   </main>
@@ -497,28 +804,28 @@
   <!-- BOTTOM STRIP: ANTI-CHEAT LOG + SPARKLINE + ROUND CONTROLS -->
   <footer class="bottom-strip">
     <div class="card">
-      <div style="font-weight:700; font-size:11.5px; color:#fca5a5; margin-bottom:4px;">Anti-Cheat &amp; Fault Budget Audit Log:</div>
+      <div class="sub-label"><span>Anti-Cheat &amp; Fault Budget Log</span></div>
       <div id="antiCheatLog" class="log-list">0 blocked attempts.</div>
     </div>
 
     <div class="card">
-      <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; margin-bottom:4px;">
+      <div class="sub-label">
         <span>Commit Throughput (60s)</span>
-        <span id="tpsNow" style="color:var(--green);">0.0 tx/s</span>
+        <span id="tpsNow" style="color:#2B2724;">0.0 tx/s</span>
       </div>
-      <svg id="sparkSvg" viewBox="0 0 300 58" style="width:100%; height:58px; background:#0b1120; border-radius:4px;">
-        <polyline id="sparkLine" fill="none" stroke="#10b981" stroke-width="2" points="" />
+      <svg id="sparkSvg" viewBox="0 0 300 58" style="width:100%; height:58px; background:#FAF8F5; border:1px solid #E4DDD5; border-radius:2px;">
+        <polyline id="sparkLine" fill="none" stroke="#8FA58C" stroke-width="1.5" points="" />
       </svg>
     </div>
 
-    <div class="card" style="display:flex; flex-direction:column; justify-content:center; gap:7px;">
+    <div class="card" style="display:flex; flex-direction:column; justify-content:center; gap:8px;">
       <button id="revealBtn">Reveal Ground Truth</button>
-      <button id="resetBtn" class="btn-red">Reset Round</button>
+      <button id="resetBtn">Reset Round</button>
     </div>
   </footer>
 
   <div id="imgModal" onclick="this.style.display='none'">
-    <img id="imgModalTarget" src="" alt="Full Telemetry Frame" />
+    <img id="imgModalTarget" src="" alt="What Blue sees" />
   </div>
 
   <script>
@@ -545,21 +852,21 @@
     };
 
     const STATE_COLORS = {
-      honest: "#10b981",
-      suspected: "#f59e0b",
-      quarantined: "#ef4444",
-      replacing: "#38bdf8",
-      byzantine_revealed: "#a855f7"
+      honest: "#8FA58C",
+      suspected: "#C9A24D",
+      quarantined: "#B5563F",
+      replacing: "#7C8A99",
+      byzantine_revealed: "#7D5A73"
     };
 
     const MSG_COLORS = {
-      PRE_PREPARE: "#38bdf8",
-      PREPARE: "#60a5fa",
-      COMMIT: "#34d399",
-      VIEW_CHANGE: "#facc15",
-      NEW_VIEW: "#fde047",
-      REQUEST: "#c084fc",
-      REPLY: "#e879f9"
+      PRE_PREPARE: "#7C8A99",
+      PREPARE: "#8FA58C",
+      COMMIT: "#6F886D",
+      VIEW_CHANGE: "#C9A24D",
+      NEW_VIEW: "#B8924A",
+      REQUEST: "#7D5A73",
+      REPLY: "#9A7E91"
     };
 
     let selectedManualNode = "S0";
@@ -589,13 +896,13 @@
           line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
           line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
           if (qA || qB) {
-            line.setAttribute("stroke", "#ef4444");
-            line.setAttribute("stroke-width", "1.8");
-            line.setAttribute("stroke-dasharray", "6,6");
-            line.setAttribute("opacity", "0.75");
+            line.setAttribute("stroke", "#B5563F");
+            line.setAttribute("stroke-width", "1");
+            line.setAttribute("stroke-dasharray", "4,4");
+            line.setAttribute("opacity", "0.85");
           } else {
-            line.setAttribute("stroke", "#1e293b");
-            line.setAttribute("stroke-width", "1.4");
+            line.setAttribute("stroke", "#E4DDD5");
+            line.setAttribute("stroke-width", "1");
           }
           layer.appendChild(line);
         }
@@ -608,35 +915,33 @@
       bannerTimers = [];
       const banner = document.getElementById("arenaEventBanner");
       const node = (repEv && repEv.node) || (qEv && qEv.node) || "S?";
-      const atk = (repEv && repEv.attack_type) || (qEv && qEv.attack_type) || "fault";
-      const src = (repEv && repEv.source) || (qEv && qEv.source) || "proof";
+      const rawAtk = (repEv && repEv.attack_type) || (qEv && qEv.attack_type) || "fault";
+      const atkLabel = rawAtk === "equivocate" ? "equivocation" : rawAtk.replace(/_/g, " ");
+      const rawSrc = (repEv && repEv.source) || (qEv && qEv.source) || "proof";
+      const srcLabel = rawSrc === "proof" ? "signed proof" : rawSrc;
 
-      // Step 1 (~1.6s): Red QUARANTINED banner + pulsing red node & dashed links
       activeStageNode = node;
       activeStagePhase = "quarantine";
       banner.className = "banner-quarantine";
-      banner.textContent = `\u{1F6A8} ${node} QUARANTINED: ${atk} (${src})`;
+      banner.textContent = `${node} quarantined · ${atkLabel} · ${srcLabel}`;
 
       if (repEv) {
-        // Step 2 (~1.8s): Green REPLACED banner + spin/flash green to honest
         bannerTimers.push(setTimeout(() => {
           activeStagePhase = "replace";
           banner.className = "banner-replace";
-          banner.textContent = `\u{1F504} ${repEv.node} REPLACED: fresh key, state transferred at seq ${repEv.seq}`;
-        }, 1600));
+          banner.textContent = `${repEv.node} replaced · fresh key · state at seq ${repEv.seq}`;
+        }, 1700));
         bannerTimers.push(setTimeout(() => {
           activeStageNode = null;
           activeStagePhase = null;
           banner.className = "";
-          banner.style.display = "";
-        }, 3500));
+        }, 3800));
       } else {
         bannerTimers.push(setTimeout(() => {
           activeStageNode = null;
           activeStagePhase = null;
           banner.className = "";
-          banner.style.display = "";
-        }, 3000));
+        }, 3200));
       }
     }
 
@@ -645,8 +950,8 @@
       const layer = document.getElementById("nodesLayer");
       layer.innerHTML = "";
       const cg = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      cg.innerHTML = `<rect x="18" y="37" width="68" height="34" rx="7" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
-        <text x="52" y="58" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="700">Client</text>`;
+      cg.innerHTML = `<rect x="20" y="41" width="64" height="26" rx="2" fill="#FAF8F5" stroke="#E4DDD5" stroke-width="1"/>
+        <text x="52" y="57" text-anchor="middle" fill="#8A817A" font-size="9.5" letter-spacing="0.1em">CLIENT</text>`;
       layer.appendChild(cg);
 
       for (const id of ["S0", "S1", "S2", "S3"]) {
@@ -656,36 +961,32 @@
         const isQuarStage = (activeStageNode === id && activeStagePhase === "quarantine") || n.visual_state === "quarantined";
         const isRepStage = (activeStageNode === id && activeStagePhase === "replace") || n.visual_state === "replacing";
 
-        let stroke = STATE_COLORS[n.visual_state] || "#10b981";
-        let fill = "#0f172a";
+        let tone = STATE_COLORS[n.visual_state] || "#8FA58C";
         let cls = "";
         if (isQuarStage) {
-          stroke = "#ef4444";
-          fill = "#2a0f18";
+          tone = "#B5563F";
           cls = "svg-node-quarantine";
         } else if (isRepStage) {
-          stroke = "#34d399";
-          fill = "#064e3b";
+          tone = "#7C8A99";
           cls = "svg-node-replace";
         }
 
-        const dash = isQuarStage ? 'stroke-dasharray="5,4"' : "";
-        const role = n.is_primary ? "PRIMARY" : "BACKUP";
-        const extra = n.revealed_mode && n.revealed_mode !== "honest" ? ` [${n.revealed_mode}]` : "";
+        const role = n.is_primary ? "primary" : "backup";
+        const extra = n.revealed_mode && n.revealed_mode !== "honest" ? ` · ${n.revealed_mode}` : "";
         const badgeSvg = n.new_key_badge
-          ? `<g transform="translate(${pos.x + 18}, ${pos.y - 44})">
-               <rect x="0" y="0" width="54" height="16" rx="8" fill="#059669" stroke="#6ee7b7" stroke-width="1"/>
-               <text x="27" y="11" text-anchor="middle" fill="#ffffff" font-size="8.5" font-weight="800">new key</text>
+          ? `<g transform="translate(${pos.x + 18}, ${pos.y - 30})">
+               <rect x="0" y="0" width="50" height="15" rx="2" fill="#FAF8F5" stroke="#8FA58C" stroke-width="1"/>
+               <text x="25" y="10.5" text-anchor="middle" fill="#2B2724" font-size="8.5">new key</text>
              </g>`
           : "";
 
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         if (cls) g.setAttribute("class", cls);
         g.innerHTML = `
-          <circle cx="${pos.x}" cy="${pos.y}" r="38" fill="${fill}" stroke="${stroke}" stroke-width="3.5" ${dash} />
-          <text x="${pos.x}" y="${pos.y - 8}" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="800">${id}${extra}</text>
-          <text x="${pos.x}" y="${pos.y + 8}" text-anchor="middle" fill="${stroke}" font-size="10" font-weight="700">${role} · v=${n.view}</text>
-          <text x="${pos.x}" y="${pos.y + 22}" text-anchor="middle" fill="#94a3b8" font-size="9.5">seq=${n.last_exec_seq} · ${n.median_outbound_latency_ms.toFixed(0)}ms</text>
+          <circle cx="${pos.x}" cy="${pos.y}" r="22" fill="${tone}" stroke="#FAF8F5" stroke-width="1" />
+          <text x="${pos.x}" y="${pos.y + 5}" text-anchor="middle" fill="#FAF8F5" font-family="Cormorant Garamond, Georgia, serif" font-size="16" font-weight="500">${id}</text>
+          <text x="${pos.x}" y="${pos.y + 35}" text-anchor="middle" fill="#2B2724" font-size="9.5" letter-spacing="0.06em">${role} · v=${n.view}${extra}</text>
+          <text x="${pos.x}" y="${pos.y + 47}" text-anchor="middle" fill="#8A817A" font-size="9">seq ${n.last_exec_seq} · ${n.median_outbound_latency_ms.toFixed(0)}ms</text>
           ${badgeSvg}
         `;
         layer.appendChild(g);
@@ -709,7 +1010,7 @@
         if (!a || !b || m.dropped) continue;
         particles.push({
           x1: a.x, y1: a.y, x2: b.x, y2: b.y,
-          color: MSG_COLORS[m.type] || "#94a3b8",
+          color: MSG_COLORS[m.type] || "#8A817A",
           p: -idx * 0.06
         });
       }
@@ -732,7 +1033,7 @@
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         c.setAttribute("cx", cx.toFixed(1));
         c.setAttribute("cy", cy.toFixed(1));
-        c.setAttribute("r", "4.2");
+        c.setAttribute("r", "3");
         c.setAttribute("fill", pt.color);
         layer.appendChild(c);
       }
@@ -771,7 +1072,7 @@
         seenReplaceId = 0;
       }
       document.getElementById("roundLabel").textContent = `Round #${st.round}`;
-      document.getElementById("modeBadge").textContent = st.fake_gemini ? "Offline (FakeGemini)" : "LIVE Gemini 4 + Decision 1";
+      document.getElementById("modeBadge").textContent = st.fake_gemini ? "Offline (FakeGemini)" : "Live Gemini 4 + Decision 1";
       document.getElementById("apiCallBadge").textContent = `API: ${st.api_calls_last_min}/${st.api_calls_max_per_min} rpm`;
 
       const totalPill = document.getElementById("bankTotalPill");
@@ -812,9 +1113,9 @@
         const cmp = st.red.campaign;
         const badge = document.getElementById("campaignRoundBadge");
         if (cmp.round > 0) {
-          badge.textContent = `Managed Agent Red: round ${cmp.round}/${cmp.total_rounds} (${cmp.status})`;
+          badge.textContent = `Round ${cmp.round}/${cmp.total_rounds} (${cmp.status})`;
         } else {
-          badge.textContent = "Managed Agent Red: round 0/3";
+          badge.textContent = "Round 0/3";
         }
         if (cmp.playbook) {
           document.getElementById("campaignPlaybook").textContent = cmp.playbook;
@@ -890,7 +1191,7 @@
       const evEl = document.getElementById("evidenceList");
       if (st.verified_evidence && st.verified_evidence.length) {
         evEl.innerHTML = st.verified_evidence.map(e =>
-          `<div class="log-item" style="color:#fca5a5;">[PROOF] ${e.kind} → accused <b>${e.accused}</b> (v=${e.view}, seq=${e.seq}, by ${e.reporter})</div>`
+          `<div class="log-item" style="color:#B5563F;">Signed proof · ${e.kind} · accused <b>${e.accused}</b> (v=${e.view}, seq=${e.seq}, by ${e.reporter})</div>`
         ).join("");
       } else {
         evEl.textContent = "None (0 signed proofs)";
@@ -1165,7 +1466,7 @@
         recordStartMs = Date.now();
         mediaRecorder.start();
         micBtn.classList.add("recording");
-        micBtn.textContent = "Recording... Release to Send to Carbon";
+        micBtn.textContent = "Recording... Release to Send";
       } catch (err) {
         alert("Microphone access error: " + err.message);
       }
@@ -1174,7 +1475,7 @@
     function stopRecording() {
       const micBtn = document.getElementById("micBtn");
       micBtn.classList.remove("recording");
-      micBtn.textContent = "Hold to Speak Attack (Mic → Carbon)";
+      micBtn.textContent = "Hold to Speak Attack";
       if (mediaRecorder && mediaRecorder.state === "recording") {
         mediaRecorder.stop();
       }
