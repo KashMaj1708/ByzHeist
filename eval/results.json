@@ -181,6 +181,9 @@
       "detection_rate_pct": 0.0,
       "correct_culprit_rate_pct": 0.0,
       "median_time_to_quarantine_sec": null,
+      "median_proof_ttq_sec": null,
+      "median_judgement_ttq_sec": null,
+      "verifiable_convictions": 0,
       "false_quarantines": 0,
       "referee_breaks": 0,
       "avg_throughput_lost_pct": 13.6,
@@ -190,20 +193,26 @@
       "rounds": 16,
       "detection_rate_pct": 93.8,
       "correct_culprit_rate_pct": 93.8,
-      "median_time_to_quarantine_sec": 10.96,
+      "median_time_to_quarantine_sec": 11.25,
+      "median_proof_ttq_sec": null,
+      "median_judgement_ttq_sec": 11.25,
+      "verifiable_convictions": 0,
       "false_quarantines": 0,
       "referee_breaks": 0,
-      "avg_throughput_lost_pct": 8.8,
+      "avg_throughput_lost_pct": 9.6,
       "slow_attack_throughput_lost_pct": 40.6
     },
     "byzheist_blue": {
       "rounds": 16,
       "detection_rate_pct": 93.8,
       "correct_culprit_rate_pct": 93.8,
-      "median_time_to_quarantine_sec": 23.97,
+      "median_time_to_quarantine_sec": 15.94,
+      "median_proof_ttq_sec": 0.378,
+      "median_judgement_ttq_sec": 21.41,
+      "verifiable_convictions": 5,
       "false_quarantines": 0,
       "referee_breaks": 0,
-      "avg_throughput_lost_pct": 13.2,
+      "avg_throughput_lost_pct": 13.8,
       "slow_attack_throughput_lost_pct": 56.2
     }
   },
@@ -224,7 +233,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.09,
-        "throughput_lost_pct": 2.1
+        "throughput_lost_pct": 2.1,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H02",
@@ -292,7 +303,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.1,
-        "throughput_lost_pct": 1.9
+        "throughput_lost_pct": 1.9,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H06",
@@ -309,7 +322,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.1,
-        "throughput_lost_pct": 1.9
+        "throughput_lost_pct": 1.9,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H07",
@@ -343,7 +358,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.1,
-        "throughput_lost_pct": 1.9
+        "throughput_lost_pct": 1.9,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H09",
@@ -360,7 +377,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.0,
-        "throughput_lost_pct": 3.8
+        "throughput_lost_pct": 3.8,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H10",
@@ -394,7 +413,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 0.77,
-        "throughput_lost_pct": 85.3
+        "throughput_lost_pct": 85.3,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H12",
@@ -411,7 +432,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.0,
-        "throughput_lost_pct": 3.9
+        "throughput_lost_pct": 3.9,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R01",
@@ -428,7 +451,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 0.8,
-        "throughput_lost_pct": 84.6
+        "throughput_lost_pct": 84.6,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R02",
@@ -445,7 +470,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.03,
-        "throughput_lost_pct": 3.3
+        "throughput_lost_pct": 3.3,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R03",
@@ -462,7 +489,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.03,
-        "throughput_lost_pct": 3.3
+        "throughput_lost_pct": 3.3,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R04",
@@ -479,7 +508,9 @@
         "referee_broke": false,
         "warmup_tps": 5.2,
         "attack_tps": 5.03,
-        "throughput_lost_pct": 3.3
+        "throughput_lost_pct": 3.3,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       }
     ],
     "baseline_b": [
@@ -498,7 +529,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.04,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H02",
@@ -510,12 +543,14 @@
         "detected": true,
         "quarantined_node": "S0",
         "correct_culprit": true,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 10.137,
+        "time_to_quarantine_sec": 12.72,
         "referee_broke": false,
         "warmup_tps": 5.0,
-        "attack_tps": 5.02,
-        "throughput_lost_pct": 0.0
+        "attack_tps": 4.54,
+        "throughput_lost_pct": 9.3
       },
       {
         "scenario_id": "H03",
@@ -527,12 +562,14 @@
         "detected": true,
         "quarantined_node": "S0",
         "correct_culprit": true,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 12.313,
+        "time_to_quarantine_sec": 12.953,
         "referee_broke": false,
         "warmup_tps": 5.0,
-        "attack_tps": 4.09,
-        "throughput_lost_pct": 18.2
+        "attack_tps": 4.06,
+        "throughput_lost_pct": 18.8
       },
       {
         "scenario_id": "H04",
@@ -544,12 +581,14 @@
         "detected": true,
         "quarantined_node": "S1",
         "correct_culprit": true,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 10.628,
+        "time_to_quarantine_sec": 10.924,
         "referee_broke": false,
-        "warmup_tps": 5.0,
-        "attack_tps": 5.05,
-        "throughput_lost_pct": 0.0
+        "warmup_tps": 5.2,
+        "attack_tps": 5.02,
+        "throughput_lost_pct": 3.4
       },
       {
         "scenario_id": "H05",
@@ -566,7 +605,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.04,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H06",
@@ -583,7 +624,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.0,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H07",
@@ -595,11 +638,13 @@
         "detected": true,
         "quarantined_node": "S2",
         "correct_culprit": true,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 9.624,
+        "time_to_quarantine_sec": 11.158,
         "referee_broke": false,
         "warmup_tps": 5.0,
-        "attack_tps": 5.05,
+        "attack_tps": 5.07,
         "throughput_lost_pct": 0.0
       },
       {
@@ -617,7 +662,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.03,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H09",
@@ -634,7 +681,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.03,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H10",
@@ -646,11 +695,13 @@
         "detected": true,
         "quarantined_node": "S3",
         "correct_culprit": true,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 9.202,
+        "time_to_quarantine_sec": 11.719,
         "referee_broke": false,
         "warmup_tps": 5.0,
-        "attack_tps": 5.0,
+        "attack_tps": 5.02,
         "throughput_lost_pct": 0.0
       },
       {
@@ -668,7 +719,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 1.85,
-        "throughput_lost_pct": 63.0
+        "throughput_lost_pct": 63.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H12",
@@ -685,7 +738,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.05,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R01",
@@ -702,7 +757,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 2.07,
-        "throughput_lost_pct": 58.7
+        "throughput_lost_pct": 58.7,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R02",
@@ -719,7 +776,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.99,
-        "throughput_lost_pct": 0.3
+        "throughput_lost_pct": 0.3,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R03",
@@ -736,7 +795,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 5.02,
-        "throughput_lost_pct": 0.0
+        "throughput_lost_pct": 0.0,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R04",
@@ -753,7 +814,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.98,
-        "throughput_lost_pct": 0.3
+        "throughput_lost_pct": 0.3,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       }
     ],
     "byzheist_blue": [
@@ -772,7 +835,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.99,
-        "throughput_lost_pct": 0.3
+        "throughput_lost_pct": 0.3,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H02",
@@ -784,12 +849,14 @@
         "detected": true,
         "quarantined_node": "S0",
         "correct_culprit": true,
+        "conviction_basis": "signed proof",
+        "verifiable_evidence": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 26.584,
+        "time_to_quarantine_sec": 0.188,
         "referee_broke": false,
         "warmup_tps": 5.0,
-        "attack_tps": 4.93,
-        "throughput_lost_pct": 1.4
+        "attack_tps": 4.7,
+        "throughput_lost_pct": 6.0
       },
       {
         "scenario_id": "H03",
@@ -801,12 +868,14 @@
         "detected": true,
         "quarantined_node": "S0",
         "correct_culprit": true,
+        "conviction_basis": "signed proof",
+        "verifiable_evidence": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 26.078,
+        "time_to_quarantine_sec": 0.396,
         "referee_broke": false,
-        "warmup_tps": 5.0,
-        "attack_tps": 4.37,
-        "throughput_lost_pct": 12.7
+        "warmup_tps": 5.2,
+        "attack_tps": 4.7,
+        "throughput_lost_pct": 9.7
       },
       {
         "scenario_id": "H04",
@@ -818,12 +887,14 @@
         "detected": true,
         "quarantined_node": "S1",
         "correct_culprit": true,
+        "conviction_basis": "signed proof",
+        "verifiable_evidence": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 30.332,
+        "time_to_quarantine_sec": 0.39,
         "referee_broke": false,
-        "warmup_tps": 5.2,
-        "attack_tps": 4.98,
-        "throughput_lost_pct": 4.3
+        "warmup_tps": 5.0,
+        "attack_tps": 4.87,
+        "throughput_lost_pct": 2.6
       },
       {
         "scenario_id": "H05",
@@ -840,7 +911,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.97,
-        "throughput_lost_pct": 0.6
+        "throughput_lost_pct": 0.6,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H06",
@@ -857,7 +930,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.92,
-        "throughput_lost_pct": 1.6
+        "throughput_lost_pct": 1.6,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H07",
@@ -869,12 +944,14 @@
         "detected": true,
         "quarantined_node": "S2",
         "correct_culprit": true,
+        "conviction_basis": "signed proof",
+        "verifiable_evidence": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 39.224,
+        "time_to_quarantine_sec": 0.378,
         "referee_broke": false,
-        "warmup_tps": 5.0,
-        "attack_tps": 4.95,
-        "throughput_lost_pct": 1.1
+        "warmup_tps": 5.2,
+        "attack_tps": 4.89,
+        "throughput_lost_pct": 6.0
       },
       {
         "scenario_id": "H08",
@@ -891,7 +968,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.76,
-        "throughput_lost_pct": 4.8
+        "throughput_lost_pct": 4.8,
+        "conviction_basis": "\u2014",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H09",
@@ -908,7 +987,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.97,
-        "throughput_lost_pct": 0.6
+        "throughput_lost_pct": 0.6,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H10",
@@ -920,12 +1001,14 @@
         "detected": true,
         "quarantined_node": "S3",
         "correct_culprit": true,
+        "conviction_basis": "signed proof",
+        "verifiable_evidence": true,
         "false_quarantine": false,
-        "time_to_quarantine_sec": 23.97,
+        "time_to_quarantine_sec": 0.189,
         "referee_broke": false,
-        "warmup_tps": 5.0,
-        "attack_tps": 4.94,
-        "throughput_lost_pct": 1.2
+        "warmup_tps": 5.2,
+        "attack_tps": 4.9,
+        "throughput_lost_pct": 5.8
       },
       {
         "scenario_id": "H11",
@@ -942,7 +1025,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 0.81,
-        "throughput_lost_pct": 83.8
+        "throughput_lost_pct": 83.8,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "H12",
@@ -959,7 +1044,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.87,
-        "throughput_lost_pct": 2.7
+        "throughput_lost_pct": 2.7,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R01",
@@ -976,7 +1063,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 0.8,
-        "throughput_lost_pct": 84.1
+        "throughput_lost_pct": 84.1,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R02",
@@ -993,7 +1082,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.83,
-        "throughput_lost_pct": 3.4
+        "throughput_lost_pct": 3.4,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R03",
@@ -1010,7 +1101,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.87,
-        "throughput_lost_pct": 2.5
+        "throughput_lost_pct": 2.5,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       },
       {
         "scenario_id": "R04",
@@ -1027,7 +1120,9 @@
         "referee_broke": false,
         "warmup_tps": 5.0,
         "attack_tps": 4.68,
-        "throughput_lost_pct": 6.4
+        "throughput_lost_pct": 6.4,
+        "conviction_basis": "model judgement",
+        "verifiable_evidence": false
       }
     ]
   },
@@ -1048,6 +1143,8 @@
       "warmup_tps": 5.0,
       "attack_tps": 4.76,
       "throughput_lost_pct": 4.8,
+      "conviction_basis": "\u2014",
+      "verifiable_evidence": false,
       "analysis": "Replica S2 ran `lie_reply` (sending fake replies only to the client). Because PBFT client quorum (`f+1=2` matching replies) masks a lone lying reply and replica-to-replica consensus traffic stays 100% honest, peer telemetry showed zero consensus anomalies while money remained 100% conserved."
     },
     {
@@ -1066,6 +1163,8 @@
       "warmup_tps": 5.0,
       "attack_tps": 0.8,
       "throughput_lost_pct": 84.1,
+      "conviction_basis": "model judgement",
+      "verifiable_evidence": false,
       "analysis": "Blue caught and replaced S0 (`slow`), but required 46.412s and experienced 84.1% throughput loss before recovery completed."
     },
     {
@@ -1084,6 +1183,8 @@
       "warmup_tps": 5.0,
       "attack_tps": 4.68,
       "throughput_lost_pct": 6.4,
+      "conviction_basis": "model judgement",
+      "verifiable_evidence": false,
       "analysis": "Blue caught and replaced S2 (`drop_votes`), but required 39.959s and experienced 6.4% throughput loss before recovery completed."
     }
   ]

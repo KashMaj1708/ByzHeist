@@ -53,4 +53,6 @@ async def test_fake_eval_completes_and_writes_results_json_and_eval_md(tmp_path:
 
     md_text = eval_md.read_text(encoding="utf-8")
     assert "## System Comparison" in md_text
+    assert "Conviction basis" in md_text
+    assert "Evidence a third party can verify" in md_text
     assert "## 3 Worst / Hardest Cases" in md_text

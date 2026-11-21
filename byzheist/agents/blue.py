@@ -190,14 +190,23 @@ class BlueWatchdog:
 
     async def _loop(self) -> None:
         try:
+            elapsed_since_llm = self.interval_sec
+            fast_poll = min(0.25, self.interval_sec)
             while self._running:
-                await self.step()
-                sleep_s = (
+                target_interval = (
                     max(self.interval_sec * 2.0, config.BLUE_IDLE_INTERVAL_SEC)
                     if self._is_idle and self.interval_sec >= config.BLUE_INTERVAL_SEC
                     else (self.interval_sec * 2.0 if self._is_idle else self.interval_sec)
                 )
-                await asyncio.sleep(sleep_s)
+                if elapsed_since_llm >= target_interval:
+                    await self.step(proof_only=False)
+                    elapsed_since_llm = 0.0
+                else:
+                    res = await self.step(proof_only=True)
+                    if res.get("auto_quarantined"):
+                        elapsed_since_llm = 0.0
+                await asyncio.sleep(fast_poll)
+                elapsed_since_llm += fast_poll
         except asyncio.CancelledError:
             return
 
@@ -234,14 +243,12 @@ class BlueWatchdog:
                 return False
         return True
 
-    async def step(self) -> dict[str, Any]:
-        """Execute one Blue watchdog tick: snapshot -> PNG -> proof check -> Decision 1 -> Neon."""
+    async def step(self, proof_only: bool = False) -> dict[str, Any]:
+        """Execute one Blue watchdog tick: proof check FIRST (before PNG/LLM) -> PNG -> Decision 1 -> Neon."""
         snap = self.sandbox.read_telemetry()
-        png_bytes = telemetry.render_png(snap)
         self.latest_snapshot = snap
-        self.latest_png = png_bytes
 
-        # 1. Proof-based immediate auto-quarantine + replace (no human approval needed)
+        # 1. Proof-based immediate auto-quarantine + replace BEFORE rendering PNG or calling any LLM!
         unhandled = [
             ev
             for ev in snap.get("verified_evidence", [])
@@ -261,6 +268,7 @@ class BlueWatchdog:
                 attack_type=str(ev["kind"]),
                 source="proof",
             )
+            quarantine_perf_t = float(q_ev.get("perf_t", time.perf_counter()))
             rep_ev = self.sandbox.replace(
                 accused,
                 attack_type=str(ev["kind"]),
@@ -282,12 +290,18 @@ class BlueWatchdog:
             if self.pending_quarantine and self.pending_quarantine.get("suspect") == accused:
                 self.pending_quarantine = None
 
+            png_bytes = telemetry.render_png(snap)
+            self.latest_png = png_bytes
             explanation = await self._explain_proof_conviction(ev, png_bytes)
             self.latest_explanation = explanation
+            self._is_idle = False
             return self._emit(
                 {
                     "timestamp": now_ts,
+                    "quarantine_perf_t": quarantine_perf_t,
                     "mode": "proof_conviction",
+                    "conviction_basis": "signed proof",
+                    "verifiable_evidence": True,
                     "suspect": accused,
                     "attack_type": ev["kind"],
                     "auto_quarantined": True,
@@ -298,6 +312,12 @@ class BlueWatchdog:
                     "explanation": explanation,
                 }
             )
+
+        if proof_only:
+            return {"timestamp": time.time(), "mode": "proof_poll_clean", "auto_quarantined": False}
+
+        png_bytes = telemetry.render_png(snap)
+        self.latest_png = png_bytes
 
         # 2. Idle check: skip Decision 1 when telemetry shows nothing new since last call
         if self._should_skip_idle_decision(snap):
