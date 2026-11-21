@@ -477,7 +477,13 @@ class FakeGemini:
         }
 
     def _heuristic_reason(self, model: str, inputs: Any, schema: Any) -> Any:
-        raw_text = json.dumps(inputs) if not isinstance(inputs, str) else inputs
+        if isinstance(inputs, list):
+            raw_text = "\n".join(
+                str(part.get("text", "")) if isinstance(part, dict) and part.get("type") == "text" else json.dumps(part)
+                for part in inputs
+            )
+        else:
+            raw_text = str(inputs)
         if schema is None:
             return (
                 "Blue watchdog verified cryptographic or behavioural telemetry evidence, "

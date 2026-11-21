@@ -220,11 +220,22 @@ Confirm exact SDK call shapes with the official Gemini API skill / docs server b
 
 ---
 
-## Stretch (only if Phase 5 is green before 3:45 PM; otherwise skip entirely)
-1. Run Red and Blue as **Antigravity Managed Agents** in a self-hosted environment (`gemini-api environments connect`) inside a container, with the arena's HTTP API as their only tool (targets the $5,000 Managed Agents prize).
-2. Gemini 3.8 Live for streaming voice instead of push-to-talk.
-3. Post-round video report: record the UI, Neon agentic video understanding finds the exact attack start timestamp.
-4. TTS commentator calling the action.
+## Stretch (folded in at 3:20 PM; order matters, hard stop still 4:30 PM)
+
+**Order:** finish Phase 6 code and its `--fake` test first. Then start the `--live` eval **in the background** (it takes ~20 min of wall time) and build S1 and S2 while it runs. Do not touch PBFT/agent code the running eval imports; if a stretch item needs a change there, wait for the eval to finish. Each stretch item gets its own short report (`reports/STRETCH_S1.md`, `reports/STRETCH_S2.md`), commit and push. If S1 is not working by 4:10 PM, stop it, leave it out of the demo, and say so in the report.
+
+**S1. Red campaign as an Antigravity Managed Agent (targets the $5,000 Managed Agents prize).** About 30 min.
+- Use the Google-hosted sandbox (`environment="remote"`, agent `antigravity-preview-09-2026`, model `gemini-4-neon`, `max_total_tokens` capped at 150k). No Docker needed.
+- The agent reaches the arena through the cloudflared tunnel URL. Add `ARENA_PUBLIC_URL` to `.env`. Its only tool is the arena's HTTP API (`/red/manual`, `/red/text`, `GET /telemetry.png`, a new read-only `GET /red/status` returning Red's own status: active mode, flagged-by-Blue yes/no, throughput impact). No other endpoints. Register the access code through the Credentials API with a domain allowlist for the tunnel host if available; otherwise pass it in the request and note that in the report.
+- Task given to the agent: run a 3-round heist campaign. Each round: pick an attack, apply it, watch telemetry and its own status for ~30 s, decide whether Blue caught it, then write what it learned to `PLAYBOOK.md` in its sandbox before the next round. At the end, return the playbook.
+- `scripts/red_campaign.py` starts it (reusing `environment_id` across turns) and saves the returned playbook to `out/red_playbook.md`; the UI shows "Managed Agent Red: round k/3" and the playbook text.
+- Test: dry run with a fake interaction client; one live run is the demo check (paste the final playbook in the report).
+
+**S2. Spoken commentary (generated audio).** About 10 min.
+- `gemini-3.8-flash-lite-tts` reads a one-line call for key events only (Red plan applied, Blue verdict, quarantine approved, replace done, referee break). At most one clip per 8 s; counts toward the call cap.
+- UI: a "Commentary" on/off toggle (default off) that plays the clips in the browser.
+
+**Skipped:** Live API streaming voice and the post-round video report (not worth the risk before 4:30).
 
 ---
 

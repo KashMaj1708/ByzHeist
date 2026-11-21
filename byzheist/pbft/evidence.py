@@ -215,7 +215,7 @@ class PeerObservations:
 
     def __init__(self, replica_ids: tuple[str, ...] = config.REPLICA_IDS) -> None:
         self.replica_ids = replica_ids
-        self._latencies_ms: dict[str, deque[float]] = {
+        self._latencies_ms: dict[str, deque[tuple[float, float]]] = {
             rid: deque(maxlen=200) for rid in replica_ids
         }
         self.missing_votes: dict[str, int] = {rid: 0 for rid in replica_ids}
@@ -223,7 +223,7 @@ class PeerObservations:
 
     def record_latency(self, peer_id: str, latency_ms: float) -> None:
         if peer_id in self._latencies_ms and latency_ms >= 0.0:
-            self._latencies_ms[peer_id].append(latency_ms)
+            self._latencies_ms[peer_id].append((time.perf_counter(), latency_ms))
 
     def record_missing_vote(self, peer_id: str, count: int = 1) -> None:
         if peer_id in self.missing_votes:
@@ -233,7 +233,8 @@ class PeerObservations:
         if peer_id in self.mismatches:
             self.mismatches[peer_id] += count
 
-    def snapshot(self, self_id: str) -> dict[str, dict[str, float | int]]:
+    def snapshot(self, self_id: str, window_sec: float = 8.0) -> dict[str, dict[str, float | int]]:
+        now = time.perf_counter()
         out: dict[str, dict[str, float | int]] = {}
         for rid in self.replica_ids:
             if rid == self_id:
@@ -244,9 +245,12 @@ class PeerObservations:
                     "mismatches": 0,
                 }
                 continue
-            samples = list(self._latencies_ms[rid])
-            avg_lat = float(statistics.fmean(samples)) if samples else 0.0
-            med_lat = float(statistics.median(samples)) if samples else 0.0
+            raw_entries = list(self._latencies_ms[rid])
+            recent = [lat for ts, lat in raw_entries if (now - ts) <= window_sec][-16:]
+            if not recent and raw_entries:
+                recent = [lat for _, lat in raw_entries[-5:]]
+            avg_lat = float(statistics.fmean(recent)) if recent else 0.0
+            med_lat = float(statistics.median(recent)) if recent else 0.0
             out[rid] = {
                 "avg_latency_ms": round(avg_lat, 2),
                 "median_latency_ms": round(med_lat, 2),
